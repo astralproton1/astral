@@ -1,10 +1,74 @@
-// --- FIX HEADER, MÚSICA Y SCROLL ---
+
+//❗Alerta, este codigo es una bazofia total
+// que compila cuando quiere, esta madre 
+// esta construida a base de sueños, 
+// esperanzas y fé. //
+// No intentes entenderlo, solo funciona así.
+// Si lo tocas, lo jodes. No me culpes a mi. //
+// Omar Galaviz //
+
+
+function formatLastSeen(lastSeen) {
+  if (!lastSeen) return 'Nunca';
+  const now = new Date();
+  const diff = now - new Date(lastSeen);
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 1) return 'Ahora';
+  if (minutes < 60) return `Hace ${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `Hace ${hours} h`;
+  const days = Math.floor(hours / 24);
+  return `Hace ${days} días`;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  try{
+    if(window.location && window.location.search && window.location.search.indexOf('demo_instructions=1') !== -1){
+      // aqui guardamos los datos por primera vez
+      if(typeof window.demoGameInstructions === 'function') window.demoGameInstructions();
+      // esperamos a que populateGamesSection renderice para abrir instrucciones
+      setTimeout(()=>{
+        try{
+          const games = window.games || window._gamesList || [];
+          if(!games || !games.length) return;
+          const g = games[0];
+          const url = g.url || g.path || '';
+          if(!url) return;
+          // preferir instrucciones registradas si es que existen
+          let instr = null;
+          try{ instr = (window.__astral_gameInstructions && window.__astral_gameInstructions.get(String(url))) || null; }catch(e){}
+          if(typeof window.openGameInIframe === 'function') window.openGameInIframe(url, { instructionsData: instr });
+        }catch(e){ console.error('demo open failed', e); }
+      }, 220);
+    }
+  }catch(e){/* ignorame esta */}
+
+  // Heartbeat polling: cada 5 segundos verificar token si hay sesión
+  setInterval(() => {
+    const token = localStorage.getItem('astralToken');
+    console.log('Heartbeat check, token:', !!token);
+    if (token) {
+      console.log('Sending heartbeat');
+      fetch(`${API}/verify-token`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      }).then(() => console.log('Heartbeat success')).catch(e => console.log('Heartbeat failed', e));
+    }
+  }, 5000);
+});
+
 document.addEventListener("DOMContentLoaded", () => {
   // Mostrar nombre en header
   const username = localStorage.getItem('username') || 'Player';
   const headerUsername = document.getElementById('header-username');
   if (headerUsername) headerUsername.textContent = username;
-
+  if (typeof startCoinsPolling === 'function') {
+    startCoinsPolling();
+  } else {
+    // Si la función aún no está definida, esperar un momento
+    setTimeout(() => {
+      if (typeof startCoinsPolling === 'function') startCoinsPolling();
+    }, 500);
+  }
   // Música de fondo en title screen
   const bgMusic = document.getElementById('bg-music');
   const titleMusic = document.getElementById('title-music');
@@ -26,7 +90,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // Request notification permission early (best-effort)
       try{ if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission().then(p => console.log('[ban-check] Notification permission: '+p)).catch(()=>{}); }catch(e){}
-      const STORAGE_KEY = 'astralx_banned_state_v1';
+      const STORAGE_KEY = 'Astral_banned_state_v1';
 
       function loadState(){
         try{ return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); }catch(e){ return {} }
@@ -214,6 +278,308 @@ document.addEventListener("DOMContentLoaded", () => {
       // Exponer helper de test para mostrar notificación manualmente
       try{ window.testShowBan = function(user, isOwn){ try{ fetchBannedAndNotify(); /* keep behavior consistent */ }catch(e){}; try{ showBanToast(user, !!isOwn); }catch(e){ console.error(e); } }; }catch(e){}
 
+    // --- SITE NOTICES: polling and UI for info/warning/critical notices (bottom-left) ---
+    (function(){
+      const containerId = 'site-notices-container';
+      const LOCAL_KEY = 'Astral_seen_notices_v1';
+      // Load seen IDs from localStorage so notices don't reappear after being seen
+      const seen = new Set();
+      try{
+        const raw = localStorage.getItem(LOCAL_KEY);
+        if(raw){
+          const arr = JSON.parse(raw);
+          if(Array.isArray(arr)) arr.forEach(id=>seen.add(id));
+        }
+      }catch(e){ /* ignore parse errors */ }
+
+      function persistSeen(){
+        try{ localStorage.setItem(LOCAL_KEY, JSON.stringify(Array.from(seen))); }catch(e){}
+      }
+
+      function ensureContainer(){
+        let c = document.getElementById(containerId);
+        if(!c){
+          c = document.createElement('div');
+          c.id = containerId;
+          c.style.cssText = 'position:fixed;left:14px;bottom:14px;z-index:200000;display:flex;flex-direction:column;gap:10px;align-items:flex-start;';
+          document.body.appendChild(c);
+        }
+        return c;
+      }
+
+      function ensureAudio(){
+        if(window.__astral_notice_audio) return window.__astral_notice_audio;
+        try{
+          const a = new Audio('info.mp3');
+          a.preload = 'auto';
+          window.__astral_notice_audio = a;
+          return a;
+        }catch(e){ return null; }
+      }
+
+      function playNoticeSound(){
+        try{
+          const a = ensureAudio();
+          if(!a) return;
+          try{ a.currentTime = 0; }catch(e){}
+          a.play().catch(()=>{});
+        }catch(e){}
+      }
+
+      function showSiteNotice(n){
+        try{
+          const c = ensureContainer();
+          if(!n || !n.id || seen.has(n.id)) return; // avoid duplicates / already-seen
+          // mark as seen immediately so it won't re-show on next poll
+          seen.add(n.id);
+          persistSeen();
+
+          console.log('[site-notices] show', n.id, n.type, n.message);
+
+          // Play sound for every new visible notice
+          try{ playNoticeSound(); }catch(e){ console.error('[site-notices] play sound failed', e); }
+
+          const el = document.createElement('div');
+          el.className = 'astral-site-notice astral-site-notice-' + (n.type || 'info');
+          el.textContent = n.message || '';
+          el.style.opacity = '0';
+          el.style.transform = 'translateY(8px)';
+          el.style.transition = 'opacity .28s, transform .28s';
+          c.appendChild(el);
+          // animate in
+          requestAnimationFrame(()=>{ el.style.opacity = '1'; el.style.transform = 'translateY(0)'; });
+
+          // Auto dismiss after 8s unless expires_at is later
+          const ttl = 8000;
+          const timeout = setTimeout(()=>{
+            try{ el.style.opacity = '0'; el.style.transform = 'translateY(8px)'; setTimeout(()=>el.remove(), 300); }catch(e){}
+          }, ttl);
+
+          // Allow click to dismiss early
+          el.addEventListener('click', ()=>{ clearTimeout(timeout); el.remove(); });
+        }catch(e){ console.error('showSiteNotice failed', e); }
+      }
+
+      async function fetchNotices(){
+        console.log('[site-notices] fetchNotices', new Date());
+        try{
+          const res = await fetch(`${API}/api/anuncios`);
+          if(!res.ok){ console.log('[site-notices] fetch failed', res.status); return; }
+          const list = await res.json();
+          if(!Array.isArray(list)) return;
+          console.log('[site-notices] fetched list length=', list.length);
+          list.reverse(); // show oldest-first so they stack naturally
+          for(const n of list){
+            try{
+              if(!n || !n.id) continue;
+              if(seen.has(n.id)) continue; // skip notices already seen by this client
+              console.log('[site-notices] new notice', n.id, n.type, n.message);
+              showSiteNotice(n);
+            }catch(e){ console.error('[site-notices] show loop error', e); }
+          }
+        }catch(e){ console.error('[site-notices] fetch error', e); }
+      }
+
+      // Expose helper for dev
+      try{ window.testShowSiteNotice = function(msg,type){ const id = 'test-'+Date.now(); showSiteNotice({ id, message: msg||'Mensaje de prueba', type: type||'info' }); }; }catch(e){}
+
+      function startSiteNoticesPolling(){
+        try{
+          if(window.__astral_site_notices_interval) return; // already running
+          // initial fetch now
+          try{ fetchNotices(); }catch(e){ console.error('[site-notices] initial fetch failed', e); }
+          window.__astral_site_notices_interval = setInterval(()=>{
+            try{ fetchNotices(); }catch(e){ console.error('[site-notices] poll error', e); }
+          }, 5 * 1000);
+          console.log('[site-notices] polling started (interval 5s)');
+        }catch(e){ console.error('[site-notices] start error', e); }
+      }
+
+      if(document.readyState === 'loading'){
+        document.addEventListener('DOMContentLoaded', startSiteNoticesPolling);
+      } else {
+        // Start ASAP but guard in case of synchronous errors
+        try{ startSiteNoticesPolling(); }catch(e){ console.error('[site-notices] start failed', e); }
+      }
+
+      // Debug helper: inspect site notices runtime state
+      try{ window.__astral_site_notices_state = ()=>({
+        seenCount: seen.size,
+        pollingIntervalId: window.__astral_site_notices_interval || null,
+      }); }catch(e){};
+    })();
+
+    /* === ADVERTENCIAS (modal) === */
+    (function(){
+      const LOCAL_PREFIX = 'Astral_seen_advertencia_v1_';
+      let _open = false;
+      let _currentUser = null;
+
+      function getSeenKey(userId){ return LOCAL_PREFIX + String(userId); }
+      function getSeen(userId){ try{ return localStorage.getItem(getSeenKey(userId)); }catch(e){ return null; } }
+      function persistSeen(userId, value){ try{ localStorage.setItem(getSeenKey(userId), String(value || '')); }catch(e){} }
+
+      // helper to ensure adv audio (out.mp3)
+      function ensureAdvAudio(){
+        if(window.__astral_adv_audio) return window.__astral_adv_audio;
+        try{
+          const a = new Audio('out.mp3');
+          a.preload = 'auto';
+          window.__astral_adv_audio = a;
+          return a;
+        }catch(e){ return null; }
+      }
+
+      function playAdvSound(){
+        try{ const a = ensureAdvAudio(); if(!a) return; try{ a.currentTime = 0; }catch(e){} a.play().catch(()=>{}); }catch(e){}
+      }
+
+      function ensureModal(){
+        let ov = document.getElementById('advertencia-overlay');
+        if(ov) return ov;
+        ov = document.createElement('div');
+        ov.id = 'advertencia-overlay';
+        ov.className = 'advertencia-overlay';
+        ov.setAttribute('aria-hidden','true');
+        ov.innerHTML = `
+          <div class="advertencia-card" role="dialog" aria-modal="true" aria-labelledby="advertencia-title" aria-describedby="advertencia-msg">
+            <div class="advertencia-inner">
+              <div class="advertencia-header">
+                <div id="advertencia-title" class="advertencia-title">Advertencia</div>
+              </div>
+              <div class="advertencia-content">
+                <div id="advertencia-msg" class="adv-message"></div>
+              </div>
+              <div class="adv-buttons-row">
+                <button id="adv-ok" class="adv-ok" aria-label="OK">OK</button>
+              </div>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(ov);
+
+        // Event wiring: OK clears advertencia on server and marks as seen
+        const ok = ov.querySelector('#adv-ok');
+
+        async function chooseAndClose(choice){
+          try{
+            const userId = _currentUser || getCurrentUserId();
+            const msg = document.getElementById('advertencia-msg') ? document.getElementById('advertencia-msg').innerHTML : '';
+            console.log('[advertencia] choice=', choice);
+            try{
+              const token = localStorage.getItem('astralToken') || '';
+              if(userId){ await fetch(`${API}/usuarios/${userId}/limpiar-advertencia`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` } }); }
+            }catch(e){ console.error('[advertencia] clear on server failed', e); }
+            if(userId) persistSeen(userId, msg);
+          }catch(e){ console.error(e); }
+          hideModal();
+        }
+
+        ok.addEventListener('click', async (e)=>{ e.preventDefault(); await chooseAndClose('ok'); });
+
+
+        // IMPORTANT: Do NOT allow overlay click or Esc to close — only buttons close the modal
+        ov.addEventListener('click', (e)=>{ /* do nothing */ });
+        document.addEventListener('keydown', (e)=>{ if(!_open) return; if(e.key === 'Escape'){ /* ignore */ } });
+
+        return ov;
+      }
+
+      function showModal(message, userId){
+        try{
+          if(_open) return;
+          _currentUser = userId || getCurrentUserId();
+          const ov = ensureModal();
+          const msgEl = document.getElementById('advertencia-msg');
+          if(msgEl) msgEl.innerHTML = message || '';
+          ov.setAttribute('aria-hidden','false');
+          requestAnimationFrame(()=>{
+            ov.classList.add('show');
+            try{ playAdvSound(); }catch(e){}
+            const btn = ov.querySelector('#adv-ok'); if(btn) try{ btn.focus(); }catch(e){}
+          });
+          _open = true;
+        }catch(e){ console.error('[advertencia] showModal failed', e); }
+      }
+
+      function hideModal(){
+        try{
+          const ov = document.getElementById('advertencia-overlay');
+          if(!ov) return; ov.classList.remove('show'); ov.setAttribute('aria-hidden','true'); _open = false; _currentUser = null;
+        }catch(e){ console.error('[advertencia] hideModal failed', e); }
+      }
+
+      async function fetchAdvertencia(){
+        try{
+          const userId = getCurrentUserId();
+          if(!userId) return;
+          // fetch user record
+          const res = await fetch(`${API}/usuarios/${userId}`);
+          if(!res.ok) return;
+          const data = await res.json();
+          const adv = data && data.advertencia ? String(data.advertencia).trim() : null;
+          if(!adv) return;
+          const seen = getSeen(userId);
+          if(seen === adv) return; // already seen
+          // show modal
+          showModal(adv, userId);
+        }catch(e){ console.error('[advertencia] fetch error', e); }
+      }
+
+      function startPolling(){
+        try{
+          if(window.__astral_advertencia_interval) return;
+          fetchAdvertencia();
+          window.__astral_advertencia_interval = setInterval(()=>{ try{ fetchAdvertencia(); }catch(e){ console.error('[advertencia] poll error', e); } }, 5000);
+          console.log('[advertencia] polling started (every 5s)');
+        }catch(e){ console.error('[advertencia] startPolling failed', e); }
+      }
+
+      if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startPolling); else startPolling();
+
+      // debug helper
+      try{ window.testShowAdvertencia = function(msg){ showModal(msg || 'Advertencia de prueba', getCurrentUserId() || 'test'); }; }catch(e){}
+
+/* Global button press animation helper. Adds a brief tactile animation on pointer interactions
+   to every button-like control: uses .is-pressing while pointer is down and .btn-press on release */
+(function(){
+  const PRESS_CLASS = 'is-pressing';
+  const ANIM_CLASS = 'btn-press';
+  const selector = 'button, input[type="button"], input[type="submit"], [role="button"], .background-button, .adv-ok, .chat-send-btn, .chat-reload-btn, .adv-option, .adv-cancel';
+
+  function findButton(el){ return el && el.closest ? el.closest(selector) : null; }
+
+  document.addEventListener('pointerdown', (e)=>{
+    try{ const b = findButton(e.target); if(!b) return; b.classList.add(PRESS_CLASS); }catch(e){}
+  }, {passive:true});
+
+  ['pointerup','pointercancel','pointerleave'].forEach(evtName => {
+    document.addEventListener(evtName, (e)=>{
+      try{
+        const b = findButton(e.target);
+        if(!b) return;
+        if(b.classList.contains(PRESS_CLASS)) b.classList.remove(PRESS_CLASS);
+        // play a quick press animation on release
+        b.classList.add(ANIM_CLASS);
+        const cleanup = ()=>{ b.classList.remove(ANIM_CLASS); b.removeEventListener('animationend', cleanup); };
+        b.addEventListener('animationend', cleanup);
+      }catch(e){}
+    }, {passive:true});
+  });
+
+  // Keyboard activation (space/enter) should also show the animation briefly
+  document.addEventListener('keydown', (e)=>{
+    if(e.key !== 'Enter' && e.key !== ' ') return;
+    try{
+      const b = findButton(e.target) || findButton(document.activeElement);
+      if(!b) return;
+      b.classList.add(ANIM_CLASS);
+      setTimeout(()=> b.classList.remove(ANIM_CLASS), 220);
+    }catch(e){}
+  });
+})();
+    })();
+
       document.addEventListener('DOMContentLoaded', ()=>{
         // comprobación inicial inmediata y luego intervalo
         fetchBannedAndNotify();
@@ -241,33 +607,7 @@ document.addEventListener("DOMContentLoaded", () => {
 // Wire setup/register tabs (CREAR CUENTA / YA TENGO CUENTA)
 document.addEventListener('DOMContentLoaded', () => {
   try {
-    const tabs = document.querySelectorAll('.setup-tabs .tab-btn');
-    if (!tabs || !tabs.length) return;
-    const setupForm = document.getElementById('setup-form');
-    const loginForm = document.getElementById('login-form');
-    const setupTitle = document.getElementById('setup-title');
-    const setupSubtitle = document.getElementById('setup-subtitle');
-
-    tabs.forEach(tab => {
-      tab.addEventListener('click', () => {
-        tabs.forEach(t => t.classList.remove('active'));
-        tab.classList.add('active');
-        const tabName = tab.dataset.tab;
-        if (tabName === 'login') {
-          if (setupForm) setupForm.classList.add('hidden');
-          if (loginForm) loginForm.classList.remove('hidden');
-          if (setupTitle) setupTitle.textContent = 'INICIAR SESIÓN';
-          if (setupSubtitle) setupSubtitle.textContent = 'Accede con tu cuenta';
-          setTimeout(() => { const f = document.getElementById('login-id'); if (f) f.focus(); }, 40);
-        } else {
-          if (loginForm) loginForm.classList.add('hidden');
-          if (setupForm) setupForm.classList.remove('hidden');
-          if (setupTitle) setupTitle.textContent = 'CONFIGURACIÓN INICIAL';
-          if (setupSubtitle) setupSubtitle.textContent = 'Crea tu identidad en AstralX';
-          setTimeout(() => { const f = document.getElementById('setup-id'); if (f) f.focus(); }, 40);
-        }
-      });
-    });
+    initSetupTabs();
   } catch (e) {
     console.error('Error wiring setup tabs', e);
   }
@@ -282,7 +622,7 @@ async function fetchAllUsers() {
     if (!res.ok) throw new Error("Error al obtener usuarios")
     return await res.json()
   } catch (e) {
-    console.error("[AstralX] Error fetching users:", e)
+    console.error("[Astral] Error fetching users:", e)
     return []
   }
 }
@@ -295,6 +635,77 @@ function getCurrentUserId() {
     return null
   }
 }
+
+// === SISTEMA DE MONEDAS ===
+let _userCoinsCache = 0;
+
+async function fetchUserCoins() {
+    try {
+        const userId = getCurrentUserId();
+        if (!userId) {
+            console.log('[coins] No userId found');
+            return 0;
+        }
+        
+        const res = await fetch(`${API}/api/user/coins?userId=${encodeURIComponent(userId)}`);
+        if (!res.ok) {
+            console.warn('[coins] fetch failed', res.status);
+            return _userCoinsCache;
+        }
+        
+        const data = await res.json();
+        const coins = data.coins || 0;
+        
+        // Actualizar UI si cambió
+        if (coins !== _userCoinsCache) {
+            updateCoinsDisplay(coins, true);
+        } else {
+            updateCoinsDisplay(coins, false);
+        }
+        
+        _userCoinsCache = coins;
+        return coins;
+    } catch (e) {
+        console.error('[coins] Error fetching coins:', e);
+        return _userCoinsCache;
+    }
+}
+
+function updateCoinsDisplay(coins, animate = false) {
+    const countEl = document.getElementById('header-coins-count');
+    const containerEl = document.getElementById('header-coins-container');
+    
+    if (countEl) {
+        countEl.textContent = formatCoins(coins);
+    }
+    
+    if (animate && containerEl) {
+        containerEl.classList.remove('pulse');
+        void containerEl.offsetWidth;
+        containerEl.classList.add('pulse');
+        setTimeout(() => containerEl.classList.remove('pulse'), 350);
+    }
+}
+
+function formatCoins(num) {
+    if (num >= 1000000) {
+        return (num / 1000000).toFixed(1) + 'M';
+    } else if (num >= 1000) {
+        return (num / 1000).toFixed(1) + 'K';
+    }
+    return String(num);
+}
+
+function startCoinsPolling() {
+  fetchUserCoins();
+  setInterval(() => {
+  fetchUserCoins();
+  }, 5000);
+}
+
+window.fetchUserCoins = fetchUserCoins;
+window.updateCoinsDisplay = updateCoinsDisplay;
+// === FIN SISTEMA DE MONEDAS ===
 
 async function renderCommunity(users) {
     const list = document.querySelector('.community-users-list');
@@ -324,6 +735,7 @@ async function renderCommunity(users) {
           <div class="community-user-info">
             <span class="community-user-name">${user.nombre || user.id}</span>
             <span class="community-user-id">${user.id}</span>
+            <span class="community-user-status">Última conexión: ${formatLastSeen(user.last_seen)}</span>
           </div>
           <div style="margin-top:8px;text-align:center;">
             <button class="background-button profile-view-btn" onclick="openUserProfileModal('${user.id}')">Ver perfil</button>
@@ -339,7 +751,7 @@ window.openUserProfileModal = async (userId) => {
   const content = document.getElementById("userProfileModalContent")
 
   if (!modal || !content) {
-    console.error("[AstralX] User profile modal elements not found")
+    console.error("[Astral] User profile modal elements not found")
     return
   }
 
@@ -368,31 +780,36 @@ window.openUserProfileModal = async (userId) => {
         relacionesHtml += `<div style="margin-bottom:0.3em;font-size:1em;opacity:0.85;">${frase}</div>`
       })
     } catch (e) {
-      console.error("[AstralX] Error fetching user relations:", e)
+      console.error("[Astral] Error fetching user relations:", e)
     }
 
     // Renderiza el perfil completo
     content.innerHTML = `
-            <div class="profile-modal-avatar" style="text-align:center;margin-bottom:1.2em;">
-                ${user.avatar ? `<img src="${user.avatar}" alt="Avatar" style="width:110px;height:110px;border-radius:50%;object-fit:cover;border:4px solid var(--accent-color);background:#222;">` : `<i class="fas fa-user" style="font-size:5em;"></i>`}
-            </div>
-            <div class="profile-modal-name" style="font-weight:700;font-size:1.6em;text-align:center;">
-                ${user.nombre || user.id}
-                ${user.rol === "owner" ? '<span style="color:#d1002f;font-weight:bold;margin-left:0.5em;">(Dueño)</span>' : ""}
-                ${user.rol === "admin_senior" ? '<span style="color:#0d47a1;font-weight:bold;margin-left:0.5em;">(Admin Senior)</span>' : ""}
-                ${user.rol === "admin" ? '<span style="color:#2196f3;font-weight:bold;margin-left:0.5em;">(Admin)</span>' : ""}
-                ${user.rol === "candidate" ? '<span style="color:#b400ff;font-weight:bold;margin-left:0.5em;">(Candidato a Admin)</span>' : ""}
-                ${user.baneado ? '<span style="color:#ff3333;font-weight:bold;margin-left:0.5em;">(BANEADO)</span>' : ""}
-            </div>
-            <div class="profile-modal-id" style="opacity:0.7;text-align:center;">@${user.id}</div>
-            ${user.genero ? `<div class="profile-modal-gender" style="margin-top:0.2em;text-align:center;"><i class="fas fa-${user.genero === "male" ? "mars" : "venus"}"></i> ${user.genero === "male" ? "Masculino" : "Femenino"}</div>` : ""}
-            ${user.edad ? `<div class="profile-modal-age" style="margin-top:0.2em;text-align:center;"><i class="fas fa-birthday-cake"></i> ${user.edad} años</div>` : ""}
-            ${user.bio ? `<div class="profile-modal-bio" style="margin-top:0.7em;opacity:0.85;text-align:center;">${user.bio}</div>` : ""}
-            ${relacionesHtml ? `<div class="profile-modal-relations" style="margin-top:1em;text-align:center;">${relacionesHtml}</div>` : ""}
-            ${user.baneado && user.motivo_ban ? `<div class="profile-modal-ban-reason" style="color:#ff3333;margin-top:1em;text-align:center;"><b>Motivo de baneo:</b> ${user.motivo_ban}</div>` : ""}
-            <div style="text-align:center;margin-top:1.2em;display:flex;gap:8px;justify-content:center;align-items:center;flex-wrap:wrap;">
-              <button id="addFriendBtnProfile" class="background-button">Agregar amigo</button>
-              <button class="background-button" onclick="closeUserProfileModal()">Cerrar</button>
+            <div style="position:relative;">
+              ${user.titular ? `<div style="position:absolute;top:0;left:0;background:linear-gradient(135deg,#0052cc,#003d99);color:#fff;padding:8px 14px;border-radius:8px;font-weight:700;font-size:0.9rem;">Titular: ${user.titular}</div>` : ""}
+              <div class="profile-modal-avatar" style="text-align:center;margin-bottom:1.2em;">
+                  ${user.avatar ? `<img src="${user.avatar}" alt="Avatar" style="width:110px;height:110px;border-radius:50%;object-fit:cover;border:4px solid var(--accent-color);background:#222;">` : `<i class="fas fa-user" style="font-size:5em;"></i>`}
+              </div>
+              <div class="profile-modal-name" style="font-weight:700;font-size:1.6em;text-align:center;">
+                  ${user.nombre || user.id}
+                  ${user.rol === "owner" ? '<span style="color:#d1002f;font-weight:bold;margin-left:0.5em;">(Dueño)</span>' : ""}
+                  ${user.rol === "admin_senior" ? '<span style="color:#0d47a1;font-weight:bold;margin-left:0.5em;">(Admin Senior)</span>' : ""}
+                  ${user.rol === "admin_bajo_custodia" ? '<span style="color:#ff9800;font-weight:bold;margin-left:0.5em;">(Administrador Bajo Custodia)</span>' : ""}
+                  ${user.rol === "admin" ? '<span style="color:#2196f3;font-weight:bold;margin-left:0.5em;">(Admin)</span>' : ""}
+                  ${user.rol === "candidate" ? '<span style="color:#b400ff;font-weight:bold;margin-left:0.5em;">(Candidato a Admin)</span>' : ""}
+                  ${user.baneado ? '<span style="color:#ff3333;font-weight:bold;margin-left:0.5em;">(BANEADO)</span>' : ""}
+              </div>
+              <div class="profile-modal-id" style="opacity:0.7;text-align:center;">@${user.id}</div>
+              <div class="profile-modal-status" style="margin-top:0.2em;text-align:center;opacity:0.8;">Última conexión: ${formatLastSeen(user.last_seen)}</div>
+              ${user.genero ? `<div class="profile-modal-gender" style="margin-top:0.2em;text-align:center;"><i class="fas fa-${user.genero === "male" ? "mars" : "venus"}"></i> ${user.genero === "male" ? "Masculino" : "Femenino"}</div>` : ""}
+              ${user.edad ? `<div class="profile-modal-age" style="margin-top:0.2em;text-align:center;"><i class="fas fa-birthday-cake"></i> ${user.edad} años</div>` : ""}
+              ${user.bio ? `<div class="profile-modal-bio" style="margin-top:0.7em;opacity:0.85;text-align:center;">${user.bio}</div>` : ""}
+              ${relacionesHtml ? `<div class="profile-modal-relations" style="margin-top:1em;text-align:center;">${relacionesHtml}</div>` : ""}
+              ${user.baneado && user.motivo_ban ? `<div class="profile-modal-ban-reason" style="color:#ff3333;margin-top:1em;text-align:center;"><b>Motivo de baneo:</b> ${user.motivo_ban}</div>` : ""}
+              <div style="text-align:center;margin-top:1.2em;display:flex;gap:8px;justify-content:center;align-items:center;flex-wrap:wrap;">
+                <button id="addFriendBtnProfile" class="background-button">Agregar amigo</button>
+                <button class="background-button" onclick="closeUserProfileModal()">Cerrar</button>
+              </div>
             </div>
         `
     // attach click handler to the add-friend button (use fetched user info)
@@ -405,7 +822,7 @@ window.openUserProfileModal = async (userId) => {
       }
     } catch (e) { console.error('attach add friend handler failed', e); }
   } catch (e) {
-    console.error("[AstralX] Error loading user profile:", e)
+    console.error("[Astral] Error loading user profile:", e)
     content.innerHTML = '<div style="color:#ff3333;text-align:center;padding:2em 0;">Error al cargar el perfil.</div>'
   }
 }
@@ -422,7 +839,7 @@ window.openFriendRequestModal = (paraId, paraName) => {
   const content = document.getElementById("friendRequestModalContent")
 
   if (!modal || !content) {
-    console.error("[AstralX] Friend request modal elements not found")
+    console.error("[Astral] Friend request modal elements not found")
     return
   }
 
@@ -494,6 +911,91 @@ document.addEventListener('DOMContentLoaded', () => {
   if (btn) btn.addEventListener('click', () => setTimeout(updateFriendRequestIndicator, 300));
 });
 
+/* === FRIEND REQUEST NOTIFICATIONS: poll and notify (in-page + system, play out.mp3) === */
+(function(){
+  const LOCAL_KEY = 'Astral_seen_friend_requests_v1';
+  const seen = new Set();
+  try{
+    const raw = localStorage.getItem(LOCAL_KEY);
+    if(raw){ const arr = JSON.parse(raw); if(Array.isArray(arr)) arr.forEach(id=>seen.add(String(id))); }
+  }catch(e){}
+  function persist(){ try{ localStorage.setItem(LOCAL_KEY, JSON.stringify(Array.from(seen))); }catch(e){} }
+
+  function ensureFriendAudio(){
+    if(window.__astral_friend_audio) return window.__astral_friend_audio;
+    try{ const a = new Audio('out.mp3'); a.preload = 'auto'; window.__astral_friend_audio = a; return a; }catch(e){ return null; }
+  }
+  function playFriendSound(){ try{ const a = ensureFriendAudio(); if(!a) return; try{ a.currentTime = 0; }catch(e){} a.play().catch(()=>{}); }catch(e){}
+  }
+
+  function ensureNoticesContainer(){
+    let c = document.getElementById('site-notices-container');
+    if(!c){ c = document.createElement('div'); c.id = 'site-notices-container'; c.style.cssText = 'position:fixed;left:14px;bottom:14px;z-index:200000;display:flex;flex-direction:column;gap:10px;align-items:flex-start;'; document.body.appendChild(c); }
+    return c;
+  }
+
+  function showFriendNotice(req){
+    try{
+      const c = ensureNoticesContainer();
+      const id = 'friend-'+String(req.id)+'-'+Date.now();
+      const el = document.createElement('div');
+      el.className = 'astral-site-notice astral-site-notice-info';
+      el.textContent = (req.de ? String(req.de) : 'Alguien') + ' te ha enviado una solicitud de amistad';
+      el.style.opacity = '0'; el.style.transform = 'translateY(8px)'; el.style.transition = 'opacity .28s, transform .28s';
+      c.appendChild(el);
+      requestAnimationFrame(()=>{ el.style.opacity = '1'; el.style.transform = 'translateY(0)'; });
+      const ttl = 8000;
+      const timeout = setTimeout(()=>{ try{ el.style.opacity = '0'; el.style.transform = 'translateY(8px)'; setTimeout(()=>el.remove(), 300); }catch(e){} }, ttl);
+      el.addEventListener('click', ()=>{ clearTimeout(timeout); el.remove(); try{ const btn = document.getElementById('btn-friends'); if(btn) btn.click(); else cargarSolicitudesAmistad(); }catch(e){} });
+    }catch(e){ console.error('[friend-notify] showFriendNotice failed', e); }
+  }
+
+  async function notifySystem(req){
+    try{
+      if(!('Notification' in window)) return;
+      if(Notification.permission === 'granted'){
+        const n = new Notification(`${req.de || 'Usuario'} te ha enviado una solicitud de amistad`, { body: req.mensaje || '', icon: req.avatar || 'logo.png', tag: 'friend-'+String(req.id) });
+        n.onclick = ()=>{ try{ window.focus(); const btn = document.getElementById('btn-friends'); if(btn) btn.click(); else cargarSolicitudesAmistad(); n.close(); }catch(e){} };
+      } else if(Notification.permission !== 'denied'){
+        try{ const p = await Notification.requestPermission(); if(p === 'granted'){ notifySystem(req); } }catch(e){}
+      }
+    }catch(e){ console.error('[friend-notify] system notify failed', e); }
+  }
+
+  async function fetchFriendRequests(){
+    try{
+      const userId = getCurrentUserId();
+      if(!userId) return;
+      const res = await fetch(`${API}/amigos/solicitudes/${encodeURIComponent(userId)}`);
+      if(!res.ok) return;
+      const list = await res.json();
+      if(!Array.isArray(list)) return;
+      for(const r of list){
+        if(!r || r.id == null) continue;
+        const key = String(r.id);
+        if(seen.has(key)) continue;
+        // New incoming request
+        seen.add(key); persist();
+        playFriendSound();
+        showFriendNotice(r);
+        notifySystem(r);
+        try{ updateFriendRequestIndicator(); }catch(e){}
+      }
+    }catch(e){ console.error('[friend-notify] fetch error', e); }
+  }
+
+  function startFriendNotifications(){
+    try{
+      if(window.__astral_friend_interval) return;
+      fetchFriendRequests();
+      window.__astral_friend_interval = setInterval(()=>{ try{ fetchFriendRequests(); }catch(e){ console.error('[friend-notify] poll error', e); } }, 5 * 1000);
+      console.log('[friend-notify] polling started (every 5s)');
+    }catch(e){ console.error('[friend-notify] start failed', e); }
+  }
+
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startFriendNotifications); else startFriendNotifications();
+})();
+
 window.sendFriendRequest = async (paraId) => {
   const mensaje = document.getElementById("friendRequestMessage")?.value || ""
   const userId = getCurrentUserId()
@@ -518,13 +1020,13 @@ window.sendFriendRequest = async (paraId) => {
       alert(data.error || "Error al enviar solicitud")
     }
   } catch (e) {
-    console.error("[AstralX] Error sending friend request:", e)
+    console.error("[Astral] Error sending friend request:", e)
     alert("Error al enviar solicitud de amistad")
   }
 }
 
 window.showCommunitySection = async () => {
-  console.log("[AstralX] Loading community section...")
+  console.log("[Astral] Loading community section...")
   // Ensure section is visible
   // Activate the community section using centralized function
   if (window.activateSection) {
@@ -544,7 +1046,7 @@ window.showCommunitySection = async () => {
 
 // --- EVENTO: Cargar comunidad al hacer clic en el botón ---
 document.addEventListener("DOMContentLoaded", () => {
-  console.log("[AstralX] Community system loaded")
+  console.log("[Astral] Community system loaded")
 
   // Buscar el botón de comunidad en el sidebar
   const communityBtn = document.querySelector('.sidebar-item[data-section="community"]')
@@ -642,6 +1144,18 @@ window.activateSection = (sectionName) => {
   if (sectionName === 'profile') {
     try { initProfileUI(); } catch (e) { console.error('activateSection initProfileUI error', e); }
   }
+
+  // If opening admin section, initialize admin UI (only allowed roles should be able to see this)
+  if (sectionName === 'admin') {
+    try {
+      if (!userHasAdminRole()) {
+        console.warn('Usuario sin permisos para abrir Admin');
+        window.activateSection('home');
+        return;
+      }
+      if (typeof window.initAdminSection === 'function') window.initAdminSection();
+    } catch (e) { console.error('activateSection initAdminSection error', e); }
+  }
 }
 
 // Global click handler to route drawer/sidebar actions through activateSection
@@ -657,6 +1171,46 @@ document.addEventListener('click', (e) => {
   }
   window.activateSection(section)
 })
+/**
+ * populateGamesSection
+ *
+ * Per-game instruction fields (place in your `window.games` objects):
+ * - url: string (required)  -- path to the game's index.html
+ * - title / name / game: string -- title shown in the instructions modal
+ * - logo / thumbnail / thumb: string -- image URL for the small logo at top-left
+ * - instructions: string -- main (large) instructions text shown in left panel
+ * - instructions2: string -- secondary instructions text shown at bottom
+ * - previewVideo / video / preview: string -- MP4 preview URL shown on the right (autoplay muted loop)
+ * - timerSecs / timer: number -- seconds to countdown before auto-entering
+ *
+ * The UI also supports data-* attributes on game elements (click targets):
+ * - data-game-url
+ * - data-game-title
+ * - data-game-logo
+ * - data-game-instructions
+ * - data-game-instructions2
+ * - data-game-video
+ * - data-game-timer
+ */
+// Example game object (add to `window.games` array or your games list):
+// {
+//   url: 'Juegos/mariovsluigi/index.html',
+//   title: 'Mario vs Luigi',
+//   logo: 'Juegos/mariovsluigi/logo.png',
+//   thumbnail: 'Juegos/mariovsluigi/thumb.jpg',
+//   instructions: 'Usa las flechas para moverte. Pulsa A para saltar.',
+//   instructions2: 'Tienes 2:30 para leer estas instrucciones y empezar.',
+//   previewVideo: 'Juegos/mariovsluigi/preview.mp4',
+//   timerSecs: 150
+// }
+
+// --- Welcome hero actions: wire CTA buttons ---
+document.addEventListener('DOMContentLoaded', () => {
+  const viewBtn = document.getElementById('btn-view-games');
+  const learnBtn = document.getElementById('btn-learn-more');
+  if(viewBtn) viewBtn.addEventListener('click', (e) => { e.stopPropagation(); if(window.activateSection) window.activateSection('section-games'); });
+  if(learnBtn) learnBtn.addEventListener('click', (e) => { e.stopPropagation(); if(window.showHelpSection) window.showHelpSection(); });
+});
 function populateGamesSection() {
   const container = document.getElementById('games-grid');
   const searchInput = document.getElementById('games-search');
@@ -687,10 +1241,36 @@ function populateGamesSection() {
     openBtn.className = 'background-button primary';
     openBtn.style.marginTop = '8px';
     openBtn.textContent = 'JUGAR';
+    // prepare instructions data to pass when opening the game
+    const instrData = {
+      logo: game.logo || game.thumb || game.thumbnail || '',
+      title: game.title || game.name || game.game || '',
+      instructions: game.instructions || game.instruction || game.desc || game.description || '',
+      instructions2: game.instructions2 || game.instruction2 || game.more || '',
+      video: game.previewVideo || game.video || game.preview || '',
+      timerSecs: (typeof game.timerSecs === 'number') ? game.timerSecs : (game.timer ? parseInt(game.timer) : undefined)
+    };
+    // attach dataset for click-delegation compatibility
+    try{
+      if(card.dataset){
+        if(game.url) card.dataset.gameUrl = game.url;
+        if(instrData.logo) card.dataset.gameLogo = instrData.logo;
+        if(instrData.title) card.dataset.gameTitle = instrData.title;
+        if(instrData.instructions) card.dataset.gameInstructions = instrData.instructions;
+        if(instrData.instructions2) card.dataset.gameInstructions2 = instrData.instructions2;
+        if(instrData.video) card.dataset.gameVideo = instrData.video;
+        if(instrData.timerSecs) card.dataset.gameTimer = instrData.timerSecs;
+      }
+    }catch(e){}
+
     openBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       if (game.url) {
-        if (typeof window.openGameInIframe === 'function') window.openGameInIframe(game.url);
+        if (typeof window.openGameInIframe === 'function') {
+            window.openGameInIframe(game.url, { instructionsData: instrData, gameId: game.id });
+            // <CHANGE> Sumar 5 monedas al abrir juego
+            if (typeof window.addGameRewardCoins === 'function') window.addGameRewardCoins();
+        }
         else window.open(game.url, '_blank');
       }
     });
@@ -705,7 +1285,11 @@ function populateGamesSection() {
     // allow clicking the card to open game too (use iframe if available)
     card.addEventListener('click', () => {
       if (!game.url) return;
-      if (typeof window.openGameInIframe === 'function') window.openGameInIframe(game.url);
+      if (typeof window.openGameInIframe === 'function') {
+          window.openGameInIframe(game.url, { instructionsData: instrData, gameId: game.id });
+          // <CHANGE> Sumar 5 monedas al abrir juego
+          if (typeof window.addGameRewardCoins === 'function') window.addGameRewardCoins();
+      }
       else window.open(game.url, '_blank');
     });
     return card;
@@ -727,6 +1311,34 @@ function populateGamesSection() {
   // Initial render
   renderList(games);
 
+  // Register per-game instructions if present in the games list
+  try{
+    if(Array.isArray(games)){
+      games.forEach(g => {
+        const key = g.url || (g.path || '');
+        if(!key) return;
+        const data = {
+          logo: g.logo || g.thumbnail || g.thumb || '',
+          title: g.title || g.name || '',
+          instructions: g.instructions || g.instruction || g.desc || g.description || '',
+          instructions2: g.instructions2 || g.instruction2 || g.more || '',
+          video: g.previewVideo || g.video || g.preview || '',
+          timerSecs: (typeof g.timerSecs === 'number') ? g.timerSecs : (g.timer ? parseInt(g.timer) : undefined)
+        };
+        // only register if there is meaningful data
+        if(data.instructions || data.instructions2 || data.video || data.logo || data.timerSecs){
+          try{
+            if(typeof window.setGameInstructions === 'function') window.setGameInstructions(key, data);
+            else {
+              window.__pendingGameInstructions = window.__pendingGameInstructions || [];
+              window.__pendingGameInstructions.push([key, data]);
+            }
+          }catch(e){}
+        }
+      });
+    }
+  }catch(e){}
+
   // Search filtering
   if (searchInput) {
     searchInput.addEventListener('input', () => {
@@ -747,12 +1359,26 @@ window.showHelpSection = function(){
   try{
     const chk = document.getElementById('help-section-hide-checkbox');
     if(!chk) return;
-    const key = 'astralx_hide_game_help';
+    const key = 'Astral_hide_game_help';
     chk.checked = localStorage.getItem(key) === '1';
     chk.addEventListener('change', ()=>{
       try{ localStorage.setItem(key, chk.checked ? '1' : '0'); }catch(e){}
     });
   }catch(e){}
+}
+
+// DEV helper: call in console to register a demo instruction set for the first game
+window.demoGameInstructions = function(){
+  try{
+    const games = window.games || window._gamesList || [];
+    if(!games || !games.length) return console.warn('No games available to demo');
+    const g = games[0];
+    const key = g.url || g.path || '';
+    if(!key) return console.warn('First game has no url/path');
+    const data = { title: g.title || 'Demo Game', instructions: 'Usa WASD o flechas para moverte. Evita los enemigos.', instructions2: 'Tienes 2:30 para leer estas instrucciones.', timerSecs: 150 };
+    if(typeof window.setGameInstructions === 'function') window.setGameInstructions(key, data);
+    console.info('Demo instructions registered for', key);
+  }catch(e){ console.error(e); }
 }
 
 // Populate games section once DOM is ready. If `window.games` is filled later, you can call populateGamesSection() manually.
@@ -905,6 +1531,8 @@ window.closeMessagesPanel = function(){
   try{
     const panel = document.getElementById('messagesPanel');
     if(panel) panel.style.display = 'none';
+    // hide the monthly reset warning when closing
+    try{ const warn = document.getElementById('chatWarning'); if(warn){ warn.classList.remove('visible'); warn.setAttribute('aria-hidden','true'); } }catch(e){}
   }catch(e){ console.error('closeMessagesPanel error', e); }
 }
 
@@ -938,6 +1566,11 @@ async function loadConversationsList() {
     listEl.innerHTML = '';
     for (const am of amigos) {
       const friendId = (am.de === user.id) ? am.para : am.de;
+      let friend = null;
+      try {
+        const friendRes = await fetch(`${API}/usuarios/${friendId}`);
+        friend = await friendRes.json();
+      } catch (e) { /* ignore */ }
       // try to get last messages (non fatal)
       let lastText = '';
       let lastTs = null;
@@ -953,18 +1586,44 @@ async function loadConversationsList() {
 
       const item = document.createElement('div');
       item.className = 'conversation-item';
-      item.style = 'display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.03);';
       item.dataset.friendId = friendId;
-      item.innerHTML = `
-        <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#333,#111);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700">${String(friendId).charAt(0).toUpperCase()}</div>
-        <div style="flex:1;min-width:0;">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <strong style="font-size:0.95rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${friendId}</strong>
-            <small style="opacity:0.6;font-size:0.8rem;">${lastTs ? new Date(lastTs).toLocaleString() : ''}</small>
-          </div>
-          <div style="font-size:0.86rem;color:rgba(200,220,255,0.7);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${(lastText||'').slice(0,80)}</div>
-        </div>
-      `;
+
+      const avatar = document.createElement('div');
+      avatar.className = 'conv-avatar';
+      avatar.textContent = String(friendId).charAt(0).toUpperCase();
+
+      const meta = document.createElement('div');
+      meta.className = 'conv-meta';
+
+      const top = document.createElement('div');
+      top.className = 'conv-top';
+
+      const nameEl = document.createElement('strong');
+      nameEl.className = 'conv-name';
+      nameEl.textContent = friendId;
+
+      const tsEl = document.createElement('small');
+      tsEl.className = 'conv-ts';
+      tsEl.textContent = lastTs ? new Date(lastTs).toLocaleString() : '';
+
+      top.appendChild(nameEl);
+      top.appendChild(tsEl);
+
+      const snippet = document.createElement('div');
+      snippet.className = 'conv-snippet';
+      snippet.textContent = (lastText || '').slice(0,80);
+
+      meta.appendChild(top);
+      meta.appendChild(snippet);
+      if (friend) {
+        const statusEl = document.createElement('div');
+        statusEl.className = 'conv-status';
+        statusEl.textContent = `Última: ${formatLastSeen(friend.last_seen)}`;
+        meta.appendChild(statusEl);
+      }
+
+      item.appendChild(avatar);
+      item.appendChild(meta);
       item.addEventListener('click', () => selectConversation(friendId));
       listEl.appendChild(item);
     }
@@ -977,7 +1636,20 @@ async function loadConversationsList() {
 async function selectConversation(friendId) {
   window.__astral_currentConversation = friendId;
   const header = document.getElementById('chatHeaderTitle');
-  if (header) header.textContent = `Conversación — ${friendId}`;
+  if (header){
+    // Set the visible title element (keeps warning badge in place)
+    const titleText = document.getElementById('chatTitleText');
+    if(titleText) titleText.textContent = `Conversación — ${friendId}`;
+    // Show the monthly-reset warning when a conversation is selected
+    const warn = document.getElementById('chatWarning');
+    if(warn) { warn.setAttribute('aria-hidden','false'); warn.classList.add('visible'); }
+  }
+  // mark active in conversations list
+  try{
+    document.querySelectorAll('#conversationsList .conversation-item').forEach(it => {
+      try{ it.classList.toggle('active', it.dataset.friendId === String(friendId)); }catch(e){}
+    });
+  }catch(e){}
   await loadConversationMessages(friendId, true);
 }
 
@@ -1001,13 +1673,37 @@ async function loadConversationMessages(friendId, scrollToBottom = true) {
       const row = document.createElement('div');
       const from = (m.de || m.from || m.sender || '');
       const text = m.texto || m.mensaje || m.message || '';
-      const isMine = from === user.id;
-      row.className = isMine ? 'msg-row msg-mine' : 'msg-row msg-other';
-      row.style = 'display:flex;flex-direction:column;align-items:' + (isMine ? 'flex-end' : 'flex-start') + ';';
+      const isMine = String(from) === String(user.id);
+      row.className = 'msg-row ' + (isMine ? 'msg-mine' : 'msg-other');
+
       const bubble = document.createElement('div');
       bubble.className = 'msg-bubble' + (isMine ? ' msg-mine' : '');
-      bubble.style.maxWidth = '80%';
-      bubble.innerHTML = `<div style="white-space:pre-wrap;">${String(text).replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div><div class='msg-ts' style='font-size:11px;opacity:0.6;margin-top:6px;'>${m.fecha ? new Date(m.fecha).toLocaleString() : (m.created_at ? new Date(m.created_at).toLocaleString() : '')}</div>`;
+
+      const wrap = document.createElement('div');
+      wrap.style.whiteSpace = 'pre-wrap';
+      wrap.textContent = String(text);
+
+      // timestamp + optional "Visto" indicator
+      const meta = document.createElement('div');
+      meta.className = 'msg-meta';
+
+      const ts = document.createElement('div');
+      ts.className = 'msg-ts';
+      ts.textContent = m.fecha ? new Date(m.fecha).toLocaleString() : (m.created_at ? new Date(m.created_at).toLocaleString() : '');
+      meta.appendChild(ts);
+
+      // If this is our message and it has been read by the other user, show seen
+      try{
+        if (isMine && (m.leido === true || m.leido === 't' || m.leido === 1)) {
+          const seen = document.createElement('span');
+          seen.className = 'msg-seen';
+          seen.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span style="font-size:11px;opacity:0.9;margin-left:4px">Visto</span>';
+          meta.appendChild(seen);
+        }
+      }catch(e){}
+
+      bubble.appendChild(wrap);
+      bubble.appendChild(meta);
       row.appendChild(bubble);
       msgsEl.appendChild(row);
     }
@@ -1110,7 +1806,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const id = addInput.value.trim();
     if (!id) return alert('Ingresa un ID de usuario válido');
     try {
-      await enviarSolicitudAmistad(id, '¡Hola! Te envío una solicitud desde AstralX');
+      await enviarSolicitudAmistad(id, '¡Hola! Te envío una solicitud desde Astral');
       alert('Solicitud enviada');
       addInput.value = '';
     } catch (e) {
@@ -1155,103 +1851,151 @@ document.addEventListener("DOMContentLoaded", () => {
 // Lista de juegos importada de lista.txt, formato multilínea y detallado
 window.games = [
     {
-        id: 100,
-        title: "Dino",
-        artist: "nodefinido",
-        thumbnail: "imgjuegos/dino.jpeg",
-        song: "juegosmusica/run3.mp3",
-        url: "Juegos/dino/index.html",
-        categories: ["retro"],
-        isNew: false,
-        isUpdate: true,
-        alert: {
-            type: "loading",
-            message: "No sirve jaja",
-            redirect: "Juegos/run3fix2/index.html"
+      id: 90,
+      title: "Declaracion de San Valentin",
+      artist: "omargalav & reycorajr",
+      thumbnail: "imgjuegos/valentin.png",
+      song: "juegosmusica/run3.mp3",
+      url: "Juegos/valentin/index.html",
+      categories: ["retro"],
+      isNew: false,
+      isUpdate: true,
+      alert: {
+          type: "loading",
+          message: "No sirve jaja",
+          redirect: "Juegos/run3fix2/index.html"
+      }
+    },
+    {
+      id: 89,
+      title: "Papa's Pizzeria",
+      artist: "No sé",
+      thumbnail: "imgjuegos/papaspizza.jpeg",
+      song: "juegosmusica/run3.mp3",
+      url: "Juegos/papaspizzeria/index.html",
+      categories: ["retro"],
+      isNew: false,
+      isUpdate: true,
+      alert: {
+          type: "loading",
+          message: "No sirve jaja",
+          redirect: "Juegos/run3fix2/index.html"
+      }
+    },
+    {
+      id: 88,
+      title: "Buscaminas",
+      artist: "nodefinido",
+      thumbnail: "imgjuegos/buscaminas.png",
+      song: "juegosmusica/run3.mp3",
+      url: "Juegos/buscaminas/index.html",
+      categories: ["retro"],
+      isNew: false,
+      isUpdate: true,
+      alert: {
+          type: "loading",
+          message: "No sirve jaja",
+          redirect: "Juegos/run3fix2/index.html"
+      }
+    },
+    {
+      id: 87,
+      title: "Dino",
+      artist: "nodefinido",
+      thumbnail: "imgjuegos/dino.jpeg",
+      song: "juegosmusica/run3.mp3",
+      url: "Juegos/dino/index.html",
+      categories: ["retro"],
+      isNew: false,
+      isUpdate: true,
+      alert: {
+          type: "loading",
+          message: "No sirve jaja",
+          redirect: "Juegos/run3fix2/index.html"
+      }
+    },
+    {
+      id: 86,
+      title: "Rooftop Snipers",
+      artist: "nodefinido",
+      thumbnail: "imgjuegos/rooftop.jpeg",
+      song: "juegosmusica/run3.mp3",
+      url: "Juegos/rooftopsnipers/index.html",
+      categories: ["retro"],
+      isNew: false,
+      isUpdate: true,
+      alert: {
+          type: "loading",
+          message: "No sirve jaja",
+          redirect: "Juegos/run3fix2/index.html"
         }
     },
     {
-        id: 246734323,
-        title: "Rooftop Snipers",
-        artist: "nodefinido",
-        thumbnail: "imgjuegos/rooftop.jpeg",
-        song: "juegosmusica/run3.mp3",
-        url: "Juegos/rooftopsnipers/index.html",
-        categories: ["retro"],
-        isNew: false,
-        isUpdate: true,
-        alert: {
-            type: "loading",
-            message: "No sirve jaja",
-            redirect: "Juegos/run3fix2/index.html"
-        }
+      id: 85,
+      title: "Sandtrix",
+      artist: "nodefinido",
+      thumbnail: "imgjuegos/sandtrix.jpeg",
+      song: "juegosmusica/run3.mp3",
+      url: "Juegos/sandtrix/index.html",
+      categories: ["retro"],
+      isNew: false,
+      isUpdate: true,
+      alert: {
+          type: "loading",
+          message: "No sirve jaja",
+          redirect: "Juegos/run3fix2/index.html"
+      }
     },
     {
-        id: 2467323,
-        title: "Sandtrix",
-        artist: "nodefinido",
-        thumbnail: "imgjuegos/sandtrix.jpeg",
-        song: "juegosmusica/run3.mp3",
-        url: "Juegos/sandtrix/index.html",
-        categories: ["retro"],
-        isNew: false,
-        isUpdate: true,
-        alert: {
-            type: "loading",
-            message: "No sirve jaja",
-            redirect: "Juegos/run3fix2/index.html"
-        }
+      id: 84,
+      title: "Fluid Simulator",
+      artist: "nodefinido",
+      thumbnail: "imgjuegos/fuidsim.jpeg",
+      song: "juegosmusica/run3.mp3",
+      url: "Juegos/fluidsim/index.html",
+      categories: ["retro"],
+      isNew: false,
+      isUpdate: true,
+      alert: {
+          type: "loading",
+          message: "No sirve jaja",
+          redirect: "Juegos/run3fix2/index.html"
+      }
     },
     {
-        id: 246733,
-        title: "Fluid Simulator",
-        artist: "nodefinido",
-        thumbnail: "imgjuegos/fuidsim.jpeg",
-        song: "juegosmusica/run3.mp3",
-        url: "Juegos/fluidsim/index.html",
-        categories: ["retro"],
-        isNew: false,
-        isUpdate: true,
-        alert: {
-            type: "loading",
-            message: "No sirve jaja",
-            redirect: "Juegos/run3fix2/index.html"
-        }
+      id: 83,
+      title: "We become what we behold",
+      artist: "nodefinido",
+      thumbnail: "imgjuegos/wbw.jpeg",
+      song: "juegosmusica/run3.mp3",
+      url: "Juegos/wbwwb/index.html",
+      categories: ["retro"],
+      isNew: false,
+      isUpdate: true,
+      alert: {
+          type: "loading",
+          message: "No sirve jaja",
+          redirect: "Juegos/run3fix2/index.html"
+      }
     },
     {
-        id: 24673,
-        title: "We become what we behold",
-        artist: "nodefinido",
-        thumbnail: "imgjuegos/wbw.jpeg",
-        song: "juegosmusica/run3.mp3",
-        url: "Juegos/wbwwb/index.html",
-        categories: ["retro"],
-        isNew: false,
-        isUpdate: true,
-        alert: {
-            type: "loading",
-            message: "No sirve jaja",
-            redirect: "Juegos/run3fix2/index.html"
-        }
+      id: 82,
+      title: "Run",
+      artist: "Ahora SI SIRVE DIOS MIO",
+      thumbnail: "imgjuegos/run.jpeg",
+      song: "juegosmusica/run3.mp3",
+      url: "Juegos/run/index.html",
+      categories: ["retro"],
+      isNew: false,
+      isUpdate: true,
+      alert: {
+          type: "loading",
+          message: "No sirve jaja",
+          redirect: "Juegos/run3fix2/index.html"
+      }
     },
     {
-        id: 2467,
-        title: "Run",
-        artist: "Ahora SI SIRVE DIOS MIO",
-        thumbnail: "imgjuegos/run.jpeg",
-        song: "juegosmusica/run3.mp3",
-        url: "Juegos/run/index.html",
-        categories: ["retro"],
-        isNew: false,
-        isUpdate: true,
-        alert: {
-            type: "loading",
-            message: "No sirve jaja",
-            redirect: "Juegos/run3fix2/index.html"
-        }
-    },
-    {
-        id: 246,
+        id: 81,
         title: "Run2",
         artist: "Ahora SI SIRVE DIOS MIO",
         thumbnail: "imgjuegos/run2.jpeg",
@@ -1267,7 +2011,7 @@ window.games = [
         }
     },
     {
-        id: 26,
+        id: 80,
         title: "Run3",
         artist: "Ahora SI SIRVE DIOS MIO",
         thumbnail: "imgjuegos/run3.jpeg",
@@ -1282,8 +2026,11 @@ window.games = [
             redirect: "Juegos/run3fix2/index.html"
         }
     },
+
+    
+
     {
-        id: 0.00000045,
+        id: 79,
         title: "FNAF 4",
         artist: "?",
         thumbnail: "imgjuegos/fnaf4.jpeg",
@@ -1298,8 +2045,11 @@ window.games = [
             redirect: "Juegos/subwaysurferssanfrancisco/index.html"
         }
     },
+
+    
+
     {
-        id: 0.00000044,
+        id: 78,
         title: "FNAF 3",
         artist: "?",
         thumbnail: "imgjuegos/fnaf3.jpeg",
@@ -1314,8 +2064,11 @@ window.games = [
             redirect: "Juegos/subwaysurferssanfrancisco/index.html"
         }
     },
+
+    
+
     {
-        id: 0.00000044,
+        id: 77,
         title: "FNAF 2",
         artist: "?",
         thumbnail: "imgjuegos/fnaf2.jpeg",
@@ -1330,8 +2083,11 @@ window.games = [
             redirect: "Juegos/subwaysurferssanfrancisco/index.html"
         }
     },
+
+    
+
     {
-        id: 0.00000042,
+        id: 76,
         title: "Fireboy and Watergirl 4",
         artist: "?",
         thumbnail: "imgjuegos/firewater4.jpeg",
@@ -1346,8 +2102,11 @@ window.games = [
             redirect: "Juegos/subwaysurferssanfrancisco/index.html"
         }
     },
+
+    
+
     {
-        id: 0.0000004,
+        id: 75,
         title: "Fireboy and Watergirl 3",
         artist: "?",
         thumbnail: "imgjuegos/firewater3.jpeg",
@@ -1362,8 +2121,11 @@ window.games = [
             redirect: "Juegos/subwaysurferssanfrancisco/index.html"
         }
     },
+
+    
+
     {
-        id: 0.0000003,
+        id: 74,
         title: "Fireboy and Watergirl 2",
         artist: "?",
         thumbnail: "imgjuegos/firewater2.jpeg",
@@ -1378,8 +2140,11 @@ window.games = [
             redirect: "Juegos/subwaysurferssanfrancisco/index.html"
         }
     },
+
+    
+
     {
-        id: 56,
+        id: 73,
         title: "Subway Surfers",
         artist: "SYBO Games",
         thumbnail: "imgjuegos/SBS.jpeg",
@@ -1394,8 +2159,11 @@ window.games = [
             redirect: "Juegos/subwaysurferssanfrancisco/index.html"
         }
     },
+
+    
+
     {
-        id: 1.000002,
+        id: 72,
         title: "Bad Piggies",
         artist: "Rovio Entertainment",
         thumbnail: "imgjuegos/badpiggies.jpeg",
@@ -1410,8 +2178,11 @@ window.games = [
             redirect: "tube.html"
         }
     },
+
+    
+
     {
-        id: 1.000001,
+        id: 71,
         title: "There is no game",
         artist: "Ahi esta en el juego",
         thumbnail: "imgjuegos/ting.png",
@@ -1426,8 +2197,11 @@ window.games = [
             redirect: "tube.html"
         }
     },
+
+    
+
     {
-        id: 1.00001,
+        id: 70,
         title: "Stack",
         artist: "Vamos a apilar",
         thumbnail: "imgjuegos/stack.jpeg",
@@ -1442,8 +2216,11 @@ window.games = [
             redirect: "tube.html"
         }
     },
+
+    
+
     {
-        id: 1.0001,
+        id: 69,
         title: "Hacker typer",
         artist: "Vamos a hackear",
         thumbnail: "imgjuegos/hacker.png",
@@ -1458,8 +2235,11 @@ window.games = [
             redirect: "tube.html"
         }
     },
+
+    
+
     {
-        id: 1.002,
+        id: 68,
         title: "FNF fixed",
         artist: "ninjamuffin99",
         thumbnail: "imgjuegos/fnfviejo.jpeg",
@@ -1474,8 +2254,11 @@ window.games = [
             redirect: "tube.html"
         }
     },
+
+    
+
     {
-        id: 1.001,
+        id: 67,
         title: "FNF: vs Sonic.exe",
         artist: "No sabemos quien hizo el port...",
         thumbnail: "imgjuegos/fnfsonicexe.jpeg",
@@ -1490,8 +2273,11 @@ window.games = [
             redirect: "tube.html"
         }
     },
+
+    
+
     {
-        id: 1.01,
+        id: 66,
         title: "FNF: vs Among Us",
         artist: "No sabemos quien hizo el port...",
         thumbnail: "imgjuegos/fnfsus.jpeg",
@@ -1506,8 +2292,11 @@ window.games = [
             redirect: "tube.html"
         }
     },
+
+    
+
     {
-        id: 1.02,
+        id: 65,
         title: "FNF: vs Doki Doki Literature Club",
         artist: "No sabemos quien hizo el port...",
         thumbnail: "imgjuegos/fnfdoki.jpeg",
@@ -1522,8 +2311,11 @@ window.games = [
             redirect: "tube.html"
         }
     },
-        {
-        id: 1,
+
+    
+
+    {
+        id: 64,
         title: "Fruit Ninja",
         artist: "HalfBrick Studios",
         thumbnail: "imgjuegos/FN.jpeg",
@@ -1538,8 +2330,11 @@ window.games = [
             redirect: "tube.html"
         }
     },
+
+    
+
     {
-        id: 2,
+        id: 63,
         title: "Plantas Vs Zombies",
         artist: "EA",
         thumbnail: "imgjuegos/pvz.jpeg",
@@ -1554,8 +2349,11 @@ window.games = [
             redirect: "musica.html"
         }
     },
+
+    
+
     {
-        id: 2.1,
+        id: 62,
         title: "Roblox",
         artist: "Roblox Corporation",
         thumbnail: "imgjuegos/roblox.jpeg",
@@ -1570,8 +2368,11 @@ window.games = [
             redirect: "robloxad.html"
         }
     },
+
+    
+
     {
-        id: 2.2,
+        id: 61,
         title: "Mario VS Luigi ONLINE",
         artist: "ipodtouch",
         thumbnail: "imgjuegos/MVLO.gif",
@@ -1586,8 +2387,11 @@ window.games = [
             redirect: "robloxad.html"
         }
     },
+
+    
+
     {
-        id: 2.3,
+        id: 60,
         title: "Color Switch",
         artist: "David Reichelt",
         thumbnail: "imgjuegos/colorswitch.png",
@@ -1602,8 +2406,11 @@ window.games = [
             redirect: "Juegos/colorswitch/index.html"
         }
     },
+
+    
+
     {
-        id: 2.4,
+        id: 59,
         title: "Google Gravity",
         artist: "Gugul",
         thumbnail: "imgjuegos/googlegravity.jpeg",
@@ -1618,8 +2425,11 @@ window.games = [
             redirect: "Juegos/googlegravity-main/index.html"
         }
     },
+
+    
+
     {
-        id: 2.5,
+        id: 58,
         title: "Paper IO 2",
         artist: "Paper IO Team",
         thumbnail: "imgjuegos/paperio2.jpeg",
@@ -1634,8 +2444,11 @@ window.games = [
             redirect: "Juegos/paperio/index.html"
         }
     },
+
+    
+
     {
-        id: 2.5,
+        id: 57,
         title: "Friday Night Funkin: Undertale",
         artist: "ninjamuffin69, PhantomArcade, evilsk8r, Kawai Sprite, AstralTeam",
         thumbnail: "imgjuegos/fnfunder.jpeg",
@@ -1650,8 +2463,11 @@ window.games = [
             redirect: "Juegos/fnfundertale/index.html"
         }
     },
+
+    
+
     {
-        id: 3,
+        id: 56,
         title: "Block Blast",
         artist: "Hungry Studio",
         thumbnail: "imgjuegos/blockblast.jpeg",
@@ -1666,8 +2482,11 @@ window.games = [
             redirect: "Juegos/blockblast/index.html"
         }
     },
+
+    
+
     {
-        id: 4,
+        id: 55,
         title: "Death Run 3D",
         artist: "Y8",
         thumbnail: "imgjuegos/deathrun3d.jpeg",
@@ -1682,8 +2501,11 @@ window.games = [
             redirect: "Juegos/death-run-3d/index.html"
         }
     },
+
+    
+
     {
-        id: 5,
+        id: 54,
         title: "Unfair Mario",
         artist: "Ni idea mijo",
         thumbnail: "imgjuegos/unfairmario.jpg",
@@ -1698,8 +2520,11 @@ window.games = [
             redirect: "Juegos/ita13/index.html"
         }
     },
+
+    
+
     {
-        id: 6,
+        id: 53,
         title: "Tunnel Rush",
         artist: "Deer Cat Games",
         thumbnail: "imgjuegos/tunnel.jpeg",
@@ -1714,8 +2539,11 @@ window.games = [
             redirect: "Juegos/tunnel-rush/index.html"
         }
     },
+
+    
+
     {
-        id: 7,
+        id: 52,
         title: "DON'T YOU LECTURE ME WITH YOUR THIRTY DOLLAR WEBSITE",
         artist: "GD COLON",
         thumbnail: "imgjuegos/30dollar.png",
@@ -1730,8 +2558,11 @@ window.games = [
             redirect: "Juegos/30dollarwebsite/index.html"
         }
     },
+
+    
+
     {
-        id: 8,
+        id: 51,
         title: "2048",
         artist: "Poki",
         thumbnail: "imgjuegos/2014.png",
@@ -1746,9 +2577,12 @@ window.games = [
             redirect: "Juegos/2048/index.html"
         }
     },
+
+    
+
     {
-        id: 9,
-        title: "Slope 2",
+        id: 50,
+        title: "Slopi",
         artist: "Y8",
         thumbnail: "imgjuegos/slope2.jpeg",
         song: "juegosmusica/slope.mp3",
@@ -1762,8 +2596,11 @@ window.games = [
             redirect: "Juegos/slope-2/index.html"
         }
     },
+
+    
+
     {
-        id: 10,
+        id: 49,
         title: "Highway Racer",
         artist: "Bonecracker Games",
         thumbnail: "imgjuegos/highway.jpeg",
@@ -1778,8 +2615,11 @@ window.games = [
             redirect: "Juegos/hwy-rcer/index.html"
         }
     },
+
+    
+
     {
-        id: 11,
+        id: 48,
         title: "Stick Duel Battle",
         artist: "undefined",
         thumbnail: "imgjuegos/stick2.jpeg",
@@ -1794,8 +2634,11 @@ window.games = [
             redirect: "Juegos/stick-duel-battle/index.html"
         }
     },
+
+    
+
     {
-        id: 12,
+        id: 47,
         title: "The World's Hardest Game",
         artist: "undefined",
         thumbnail: "imgjuegos/hard.jpeg",
@@ -1810,8 +2653,11 @@ window.games = [
             redirect: "Juegos/ita10/index.html"
         }
     },
+
+    
+
     {
-        id: 13,
+        id: 46,
         title: "Stickman Hook",
         artist: "?",
         thumbnail: "imgjuegos/stick.jpeg",
@@ -1826,8 +2672,11 @@ window.games = [
             redirect: "Juegos/stickman-hook/index.html"
         }
     },
+
+    
+
     {
-        id: 14,
+        id: 45,
         title: "PolyTrack",
         artist: "PolyTrack",
         thumbnail: "imgjuegos/poly.jpeg",
@@ -1842,8 +2691,11 @@ window.games = [
             redirect: "Juegos/polytrack/index.html"
         }
     },
+
+    
+
     {
-        id: 15,
+        id: 44,
         title: "Tertis Chafa",
         artist: "NotArtistAvailable",
         thumbnail: "imgjuegos/tetris.jpg",
@@ -1858,8 +2710,11 @@ window.games = [
             redirect: "Juegos/ita11/index.html"
         }
     },
+
+    
+
     {
-        id: 16,
+        id: 43,
         title: "A Dance of Fire and Ice",
         artist: "Ni idea crack",
         thumbnail: "imgjuegos/adofai.jpeg",
@@ -1874,8 +2729,11 @@ window.games = [
             redirect: "Juegos/a-dance-of-fire-and-ice/index.html"
         }
     },
+
+    
+
     {
-        id: 17,
+        id: 42,
         title: "Google Snake",
         artist: "Google",
         thumbnail: "imgjuegos/snake.jpeg",
@@ -1890,8 +2748,11 @@ window.games = [
             redirect: "Juegos/google-snake/index.html"
         }
     },
+
+    
+
     {
-        id: 18,
+        id: 41,
         title: "Super Mario Combat",
         artist: "Sun-studios",
         thumbnail: "imgjuegos/mariocombat.jpeg",
@@ -1906,8 +2767,11 @@ window.games = [
             redirect: "Juegos/ita9/index.html"
         }
     },
+
+    
+
     {
-        id: 19,
+        id: 40,
         title: "BitLife",
         artist: "Ni idea crack",
         thumbnail: "imgjuegos/bitlife.png",
@@ -1922,8 +2786,11 @@ window.games = [
             redirect: "Juegos/bitlife/index.html"
         }
     },
+
+    
+
     {
-        id: 20,
+        id: 39,
         title: "Angry Birds",
         artist: "ROVIO",
         thumbnail: "imgjuegos/angry.jpeg",
@@ -1938,10 +2805,13 @@ window.games = [
             redirect: "Juegos/angrybirds/index.html"
         }
     },
+
+    
+
     {
-        id: 22,
+        id: 38,
         title: "Cat Tenis",
-        artist: "AstralOriginals (Astral lo porteo)",
+        artist: "?",
         thumbnail: "imgjuegos/cattenis.png",
         song: "juegosmusica/cattenis.mp3",
         url: "Juegos/cattenis/index.html",
@@ -1954,8 +2824,11 @@ window.games = [
             redirect: "Juegos/cattenis/index.html"
         }
     },
+
+    
+
     {
-        id: 23,
+        id: 37,
         title: "Slowroads",
         artist: "slowroads.io",
         thumbnail: "imgjuegos/slowroad.jpeg",
@@ -1970,8 +2843,11 @@ window.games = [
             redirect: "Juegos/slowroads/index.html"
         }
     },
+
+    
+
     {
-        id: 24,
+        id: 36,
         title: "8 Ball Pool",
         artist: "?",
         thumbnail: "imgjuegos/8ballpool.jpeg",
@@ -1986,40 +2862,51 @@ window.games = [
             redirect: "Juegos/8ball/index.html"
         }
     },
+
+    
+
     {
-        id: 25,
-        title: "1v1.lol",
-        artist: "?",
-        thumbnail: "imgjuegos/1v1.png",
-        song: "juegosmusica/run3.mp3",
-        url: "Juegos/1v1fixed/index.html",
+        id: 35,
+        title: "Juego no disponible 10",
+        artist: "<no definido>",
+        thumbnail: "",
+        song: "",
+        url: "Juegos/no.html",
         categories: ["retro"],
         isNew: false,
-        isUpdate: true,
+        isUpdate: false,
+        folder: "mario",
         alert: {
             type: "loading",
-            message: "A ver si ahora si funciona este juego jajaja",
-            redirect: "Juegos/1v1fixed/index.html"
+            message: "¡No olvides tirar al pinguino por el vacio!",
+            redirect: "Juegos/SM64/index.html"
         }
     },
+
+    
+
     {
-        id: 27,
-        title: "Astral Chess",
-        artist: "AstralOriginals",
-        thumbnail: "imgjuegos/astralchess.png",
-        song: "titulonuevo.mp3",
-        url: "Juegos/astralchess/index.html",
-        categories: ["arcade"],
-        isNew: true,
+        id: 34,
+        title: "Juego no disponible 9",
+        artist: "<no definido>",
+        thumbnail: "",
+        song: "",
+        url: "Juegos/no.html",
+        categories: ["retro"],
+        isNew: false,
         isUpdate: false,
+        folder: "mario",
         alert: {
-            type: "info",
-            message: "¡Recuerda siempre jugar con un amigo!",
-            redirect: "Juegos/astralchess/index.html"
+            type: "loading",
+            message: "¡No olvides tirar al pinguino por el vacio!",
+            redirect: "Juegos/SM64/index.html"
         }
     },
+
+    
+
     {
-        id: 28,
+        id: 33,
         title: "Wii Simulation",
         artist: "The Onliine Project",
         thumbnail: "imgjuegos/Wii.png",
@@ -2034,9 +2921,12 @@ window.games = [
             redirect: "Juegos/vwii/index.html"
         }
     },
+
+    
+
     {
-        id: 29,
-        title: "Minecraft: Astral x Precision Client",
+        id: 32,
+        title: "Minecraft Precision Client",
         artist: "Mojang/Precision Client",
         thumbnail: "imgjuegos/minecraft.jpg",
         song: "juegosmusica/mc.mp3",
@@ -2050,25 +2940,31 @@ window.games = [
             redirect: "Juegos/minecraft/index.html"
         }
     },
+
+    
+
     {
-        id: 30,
-        title: "Mario Party 2",
-        artist: "Nintendo",
-        thumbnail: "imgjuegos/mp2.jpeg",
-        song: "juegosmusica/mp2.mp3",
-        url: "Juegos/MarioParty2/index.html",
+        id: 31,
+        title: "Juego no disponible 8",
+        artist: "<no definido>",
+        thumbnail: "",
+        song: "",
+        url: "Juegos/no.html",
         categories: ["retro"],
-        isNew: true,
+        isNew: false,
         isUpdate: false,
         folder: "mario",
         alert: {
             type: "loading",
-            message: "Cargando el juego... ¡Recuerda siempre ganarle al chango!",
-            redirect: "Juegos/MarioParty2/index.html"
+            message: "¡No olvides tirar al pinguino por el vacio!",
+            redirect: "Juegos/SM64/index.html"
         }
     },
+
+    
+
     {
-        id: 31,
+        id: 30,
         title: "Geometry Dash (Unity WebGL)",
         artist: "Not Avaible",
         thumbnail: "imgjuegos/gds.jpeg",
@@ -2083,8 +2979,11 @@ window.games = [
             redirect: "Juegos/geometry-dash-lite/index.html"
         }
     },
+
+    
+
     {
-        id: 32,
+        id: 29,
         title: "Geometry Dash (Scratch)",
         artist: "Robert Nicholas Christian Topala",
         thumbnail: "imgjuegos/gds.jpeg",
@@ -2099,8 +2998,11 @@ window.games = [
             redirect: "Juegos/geometrydash/index.html"
         }
     },
+
+    
+
     {
-        id: 33,
+        id: 28,
         title: "Tetris pirata",
         artist: "NA",
         thumbnail: "imgjuegos/tetris.jpg",
@@ -2115,78 +3017,77 @@ window.games = [
             redirect: "mensaje.html"
         }
     },
+
+    
+
     {
-        id: 34,
-        title: "Super Mario Construct",
-        artist: "LSS",
-        thumbnail: "imgjuegos/SMC.jpeg",
-        song: "juegosmusica/smc.mp3",
-        url: "Juegos/MARIO.html",
+        id: 27,
+        title: "Juego no disponible 7",
+        artist: "<no definido>",
+        thumbnail: "",
+        song: "",
+        url: "Juegos/no.html",
         categories: ["retro"],
         isNew: false,
-        isUpdate: true,
+        isUpdate: false,
         folder: "mario",
         alert: {
             type: "loading",
-            message: "Cargando el juego... ¡No olvides usar tu creatividad al maximo!",
-            redirect: "Juegos/MARIO.html"
+            message: "¡No olvides tirar al pinguino por el vacio!",
+            redirect: "Juegos/SM64/index.html"
         }
     },
+
+    
+
     {
-        id: 35,
-        title: "Sans",
-        artist: "TobyFox?",
-        thumbnail: "imgjuegos/sans.jpg",
-        song: "juegosmusica/sans.mp3",
-        url: "Juegos/sans/index.html",
+        id: 26,
+        title: "Juego no disponible 6",
+        artist: "<no definido>",
+        thumbnail: "",
+        song: "",
+        url: "Juegos/no.html",
         categories: ["retro"],
         isNew: false,
         isUpdate: false,
+        folder: "mario",
         alert: {
             type: "loading",
-            message: "¿Quieres pasar un mal rato?",
-            redirect: "Juegos/sans/index.html"
+            message: "¡No olvides tirar al pinguino por el vacio!",
+            redirect: "Juegos/SM64/index.html"
         }
     },
+
+    
+
     {
-        id: 36,
-        title: "Stack Ball",
-        artist: "NA",
-        thumbnail: "imgjuegos/stackball.jpg",
-        song: "titulo.mp3",
-        url: "Juegos/stack/index.html",
+        id: 25,
+        title: "Juego no disponible 5",
+        artist: "<no definido>",
+        thumbnail: "",
+        song: "",
+        url: "Juegos/no.html",
         categories: ["retro"],
         isNew: false,
         isUpdate: false,
+        folder: "mario",
         alert: {
             type: "loading",
-            message: "No sé que decir aqui.",
-            redirect: "Juegos/stack/index.html"
+            message: "¡No olvides tirar al pinguino por el vacio!",
+            redirect: "Juegos/SM64/index.html"
         }
     },
+
+
+    
+
     {
-        id: 37,
-        title: "AstralEmulator",
-        artist: "Aplicacion basada en la app codigo abierto emulator.js modificada por AstralTeam",
-        thumbnail: "imgjuegos/noimg.png",
-        song: "titulo.mp3",
-        url: "Juegos/AstralEmulator1.5/index.html",
-        categories: ["retro"],
-        isNew: false,
-        isUpdate: true,
-        alert: {
-            type: "loading",
-            message: "¡Le recomendamos mucho Jugar Super Mario World!",
-            redirect: "Juegos/AstralEmulator1.5/index.html"
-        }
-    },
-    {
-        id: 38,
-        title: "8 Ball Pool",
+        id: 24,
+        title: "8 Ball Pool (OLD)",
         artist: "?",
         thumbnail: "imgjuegos/8ballpool.jpeg",
         song: "titulo.mp3",
-        url: "Juegos/ita8/index.html",
+        url: "Juegos/8ball/index.html",
         categories: ["puzzle"],
         isNew: false,
         isUpdate: false,
@@ -2196,8 +3097,11 @@ window.games = [
             redirect: "Juegos/ita8/index.html"
         }
     },
+
+    
+
     {
-        id: 39,
+        id: 23,
         title: "Fireboy & Watergirl",
         artist: "?",
         thumbnail: "imgjuegos/FYW.jpeg",
@@ -2212,8 +3116,11 @@ window.games = [
             redirect: "Juegos/firewater/index.html"
         }
     },
+
+    
+
     {
-        id: 40,
+        id: 22,
         title: "Cut the Rope",
         artist: "Zeptolabs",
         thumbnail: "imgjuegos/ctr.jpg",
@@ -2228,8 +3135,11 @@ window.games = [
             redirect: "Juegos/ctr/index.html"
         }
     },
+
+    
+
     {
-        id: 41,
+        id: 21,
         title: "DOOM",
         artist: "NA",
         thumbnail: "imgjuegos/doom.jpeg",
@@ -2244,8 +3154,11 @@ window.games = [
             redirect: "Juegos/doom/index.html"
         }
     },
+
+    
+
     {
-        id: 42,
+        id: 20,
         title: "Windows XP",
         artist: "Open Source Docker",
         thumbnail: "imgjuegos/winxp.jpeg",
@@ -2260,8 +3173,11 @@ window.games = [
             redirect: "Juegos/winxp/VirtualXP.htm"
         }
     },
+
+    
+
     {
-        id: 43,
+        id: 19,
         title: "FNF Garcello Mod",
         artist: "NA",
         thumbnail: "imgjuegos/fnfg.jpeg",
@@ -2277,25 +3193,31 @@ window.games = [
             redirect: "Juegos/fnfg/index.html"
         }
     },
+
+    
+
     {
-        id: 44,
-        title: "FNF",
-        artist: "ninjamuffin",
-        thumbnail: "imgjuegos/fnfviejo.jpeg",
-        song: "juegosmusica/fnfv.mp3",
-        url: "Juegos/fnfviejo/index.html",
-        categories: ["arcade"],
+        id: 18,
+        title: "Slope",
+        artist: "Y8",
+        thumbnail: "imgjuegos/slope.jpg",
+        song: "juegosmusica/slope.mp3",
+        url: "Juegos/slope/index.html",
+        categories: ["action"],
         isNew: false,
         isUpdate: false,
-        folder: "fnf",
         alert: {
             type: "loading",
-            message: "¡No pierdas!",
-            redirect: "Juegos/fnfviejo/index.html"
+            message: "¡Es hora de esquivar los obstaculos!",
+            redirect: "Juegos/slope/index.html"
         }
     },
+
+
+    
+
     {
-        id: 45,
+        id: 17,
         title: "FNF Vs Shaggy",
         artist: "NA",
         thumbnail: "imgjuegos/fnfvsshaggy.jpeg",
@@ -2311,57 +3233,67 @@ window.games = [
             redirect: "Juegos/fnfshaggy/index.html"
         }
     },
+
+    
+
     {
-        id: 46,
-        title: "Super Mario 127",
-        artist: "LSS",
-        thumbnail: "imgjuegos/mario127.jpeg",
-        song: "juegosmusica/mario127.mp3",
-        url: "Juegos/MARIO127.html",
+        id: 16,
+        title: "Juego no disponible 4",
+        artist: "<no definido>",
+        thumbnail: "",
+        song: "",
+        url: "Juegos/no.html",
         categories: ["retro"],
         isNew: false,
         isUpdate: false,
         folder: "mario",
         alert: {
             type: "loading",
-            message: "¡No te caigas al vacio!",
-            redirect: "Juegos/MARIO127.html"
+            message: "¡No olvides tirar al pinguino por el vacio!",
+            redirect: "Juegos/SM64/index.html"
         }
     },
+
     {
-        id: 47,
-        title: "Slope",
-        artist: "Y8",
-        thumbnail: "imgjuegos/slope.jpg",
-        song: "juegosmusica/slope.mp3",
-        url: "Juegos/slope/index.html",
-        categories: ["action"],
+        id: 15,
+        title: "FNFOriginal",
+        artist: "ninjamuffin",
+        thumbnail: "imgjuegos/fnfviejo.jpeg",
+        song: "juegosmusica/fnfv.mp3",
+        url: "Juegos/fnfviejo/index.html",
+        categories: ["arcade"],
         isNew: false,
         isUpdate: false,
+        folder: "fnf",
         alert: {
             type: "loading",
-            message: "¡Es hora de esquivar los obstaculos!",
-            redirect: "Juegos/slope/index.html"
+            message: "¡No pierdas!",
+            redirect: "Juegos/fnfviejo/index.html"
         }
     },
+    
+
     {
-        id: 48,
-        title: "Baldi",
-        artist: "NA",
-        thumbnail: "imgjuegos/baldi.jpg",
-        song: "juegosmusica/baldi.mp3",
-        url: "Juegos/baldi/index.html",
-        categories: ["action"],
+        id: 14,
+        title: "Juego no disponible 3",
+        artist: "<no definido>",
+        thumbnail: "",
+        song: "",
+        url: "Juegos/no.html",
+        categories: ["retro"],
         isNew: false,
         isUpdate: false,
+        folder: "mario",
         alert: {
             type: "loading",
-            message: "Recuerda: ¡1+1 = 2!",
-            redirect: "Juegos/baldi/index.html"
+            message: "¡No olvides tirar al pinguino por el vacio!",
+            redirect: "Juegos/SM64/index.html"
         }
     },
+    
+
     {
-        id: 50,
+        id: 13,
         title: "FNAF 1",
         artist: "Scott",
         thumbnail: "imgjuegos/fnafbg.jpeg",
@@ -2376,30 +3308,16 @@ window.games = [
             redirect: "Juegos/FNAF1/index.html"
         }
     },
+
+    
+
     {
-        id: 51,
-        title: "Mario Kart 64",
-        artist: "Nintendo",
-        thumbnail: "imgjuegos/mk64b.jpg",
-        song: "juegosmusica/mk64.mp3",
-        url: "Juegos/MarioKart64/index.html",
-        categories: ["retro"],
-        isNew: false,
-        isUpdate: true,
-        folder: "mario",
-        alert: {
-            type: "loading",
-            message: "¡Recuerda siempre pegarle al chango!",
-            redirect: "Juegos/MarioKart64/index.html"
-        }
-    },
-    {
-        id: 52,
-        title: "Super Mario 64",
-        artist: "Nintendo",
-        thumbnail: "imgjuegos/mario64.jpg",
-        song: "juegosmusica/mario64.mp3",
-        url: "Juegos/SM64/index.html",
+        id: 12,
+        title: "Juego no disponible 2",
+        artist: "<no definido>",
+        thumbnail: "",
+        song: "",
+        url: "Juegos/no.html",
         categories: ["retro"],
         isNew: false,
         isUpdate: false,
@@ -2410,8 +3328,31 @@ window.games = [
             redirect: "Juegos/SM64/index.html"
         }
     },
+
+    
+
     {
-        id: 53,
+        id: 11,
+        title: "Juego no disponible 1",
+        artist: "<no definido>",
+        thumbnail: "",
+        song: "",
+        url: "Juegos/no.html",
+        categories: ["retro"],
+        isNew: false,
+        isUpdate: false,
+        folder: "mario",
+        alert: {
+            type: "loading",
+            message: "¡No olvides tirar al pinguino por el vacio!",
+            redirect: "Juegos/SM64/index.html"
+        }
+    },
+
+    
+
+    {
+        id: 10,
         title: "Sonic Mania",
         artist: "SEGA",
         thumbnail: "imgjuegos/mania.jpg",
@@ -2423,27 +3364,14 @@ window.games = [
         alert: {
             type: "info",
             message: "Cuando inicie el juego presiona ESC (Escape) en tu teclado para iniciar un mod menu, ahi elije el nivel porque el menu no sirve.",
-            redirect: "Juegos/mania/index.html"
+            redirect: "Juegos/mania/RSDKv5.html"
         }
     },
+
+    
+
     {
-        id: 54,
-        title: "Super Yoshi Construct",
-        artist: "LSS",
-        thumbnail: "imgjuegos/yfs.jpeg",
-        song: "juegosmusica/smc.mp3",
-        url: "Juegos/YOSHI.html",
-        categories: ["retro"],
-        isNew: false,
-        isUpdate: false,
-        alert: {
-            type: "loading",
-            message: "¡No olvides usar tu creatividad al maximo!",
-            redirect: "Juegos/YOSHI.html"
-        }
-    },
-    {
-        id: 55,
+        id: 9,
         title: "Tomb of The Mask",
         artist: "NA",
         thumbnail: "imgjuegos/totm.jpg",
@@ -2458,8 +3386,11 @@ window.games = [
             redirect: "Juegos/totm/index.html"
         }
     },
+
+    
+
     {
-        id: 57,
+        id: 8,
         title: "Henry Stickmin: BTB",
         artist: "Puffballs United & Newgrounds",
         thumbnail: "imgjuegos/btb.jpeg",
@@ -2475,8 +3406,11 @@ window.games = [
             redirect: "Juegos/ita3/index.html"
         }
     },
+
+    
+
     {
-        id: 58,
+        id: 7,
         title: "Henry Stickmin: ETP",
         artist: "Puffballs United & Newgrounds",
         thumbnail: "imgjuegos/etp.jpeg",
@@ -2492,8 +3426,11 @@ window.games = [
             redirect: "Juegos/ita4/index.html"
         }
     },
+
+    
+
     {
-        id: 59,
+        id: 6,
         title: "Henry Stickmin: STD",
         artist: "Puffballs United & Newgrounds",
         thumbnail: "imgjuegos/std.jpeg",
@@ -2509,8 +3446,11 @@ window.games = [
             redirect: "Juegos/ita5/index.html"
         }
     },
+
+    
+
     {
-        id: 60,
+        id: 5,
         title: "Henry Stickmin: ITA",
         artist: "Puffballs United & Newgrounds",
         thumbnail: "imgjuegos/ita.jpg",
@@ -2526,8 +3466,11 @@ window.games = [
             redirect: "Juegos/ita/index.html"
         }
     },
+
+    
+
     {
-        id: 61,
+        id: 4,
         title: "Henry Stickmin: FTC",
         artist: "Puffballs United & Newgrounds",
         thumbnail: "imgjuegos/ftc.jpeg",
@@ -2543,8 +3486,11 @@ window.games = [
             redirect: "Juegos/ita6/index.html"
         }
     },
+
+    
+
     {
-        id: 62,
+        id: 3,
         title: "The Binding Of Isaac - FL",
         artist: "Edmund McMillen, Florian Himsl",
         thumbnail: "imgjuegos/isaacico.jpg",
@@ -2559,8 +3505,11 @@ window.games = [
             redirect: "Juegos/ita2/index.html"
         }
     },
+
+    
+
     {
-        id: 63,
+        id: 2,
         title: "Crossy Road",
         artist: "Hipster Whale",
         thumbnail: "imgjuegos/crossy.jpg",
@@ -2575,8 +3524,11 @@ window.games = [
             redirect: "Juegos/crossyroad/index.html"
         }
     },
+
+    
+
     {
-        id: 64,
+        id: 1,
         title: "Bad Ice Cream 1",
         artist: "NA",
         thumbnail: "Juegos/badicecream/bad-ice-cream.png",
@@ -2591,7 +3543,13 @@ window.games = [
             redirect: "Juegos/badicecream/index.html"
         }
     }
+
+
 ];
+
+// IDs are permanently normalized. See tools/normalize_ids.py for details.
+
+
 const API_URL = "https://astral-ban-api.onrender.com"
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -2627,31 +3585,275 @@ document.addEventListener("DOMContentLoaded", () => {
   let isTitleScreenActive = false
 
 
-  // Paso 1: Simular Carga
-  setTimeout(() => {
-    transitionToTitle()
-  }, LOADING_TIME)
-
-  function transitionToTitle() {
-    // Desvanecer loader
-    loaderScreen.classList.add("fade-out")
-
-    // Esperar a que termine la animación de fade-out (0.8s en CSS)
-    setTimeout(() => {
-      loaderScreen.classList.add("hidden") // Ocultar completamente
-      loaderScreen.classList.remove("active")
-
-      // Mostrar Title Screen
-      titleScreen.classList.remove("hidden")
-      titleScreen.classList.add("fade-in") // Clase para animar entrada
-      isTitleScreenActive = true
-
-      // Intentar reproducir música
-      playMusic()
-    }, 800)
+  // Ensure playMusic exists (safe no-op if audio not available)
+  function playMusic(){
+    try{
+      const bg = document.getElementById('bg-music');
+      if(bg && typeof bg.play === 'function'){
+        bg.play().catch(()=>{});
+      }
+    }catch(e){/* ignore */}
   }
 
+  // Paso 1: Simular Carga y actualizar barra
+  const RANDOM_LOADING_TIME = Math.floor(Math.random() * 3000) + 3000; // 3000-6000ms
+  simulateLoadingProgress(RANDOM_LOADING_TIME);
+
+  function simulateLoadingProgress(totalMs){
+      const start = Date.now();
+      const light = document.getElementById('loading-light');
+      const status = document.getElementById('loading-status');
+      const percent = document.getElementById('loading-percent');
+      
+      if(!light) {
+          setTimeout(transitionToPretitle, totalMs);
+          return;
+      }
+
+      // Mensajes de carga que cambiarán durante el proceso
+      const loadingMessages = [
+          "Preparando recursos del sistema...",
+          "Inicializando módulos...",
+          "Cargando componentes gráficos...",
+          "Verificando conexión...",
+          "Preparando interfaz...",
+          "Casi listo..."
+      ];
+
+      function updateProgress(){
+          const elapsed = Date.now() - start;
+          const progress = Math.min(elapsed / totalMs, 1);
+          const pct = Math.floor(progress * 100);
+          
+          // Actualizar barra
+          light.style.width = pct + '%';
+          
+          // Actualizar porcentaje
+          if(percent) percent.textContent = pct + '%';
+          
+          // Actualizar mensaje según el progreso
+          if(status) {
+              if(pct < 15) {
+                  status.textContent = loadingMessages[0];
+              } else if(pct < 30) {
+                  status.textContent = loadingMessages[1];
+              } else if(pct < 50) {
+                  status.textContent = loadingMessages[2];
+              } else if(pct < 70) {
+                  status.textContent = loadingMessages[3];
+              } else if(pct < 90) {
+                  status.textContent = loadingMessages[4];
+              } else {
+                  status.textContent = loadingMessages[5];
+              }
+          }
+          
+          if(progress < 1){
+              requestAnimationFrame(updateProgress);
+          } else {
+              // Carga completa, transicionar
+              setTimeout(transitionToPretitle, 200);
+          }
+      }
+      
+      requestAnimationFrame(updateProgress);
+  }
+  function simulateLoadingProgress(totalMs){
+    const start = Date.now();
+    const light = document.getElementById('loading-light');
+    const status = document.getElementById('loading-status');
+    const percent = document.getElementById('loading-percent');
+    if(!light) {
+      setTimeout(transitionToTitle, totalMs);
+      return;
+    }
+    const tick = ()=>{
+      const elapsed = Math.min(Date.now() - start, totalMs);
+      const p = Math.round((elapsed / totalMs) * 100);
+      light.style.width = p + "%";
+      if(percent) percent.textContent = p + "%";
+      if(status) status.textContent = (p < 100) ? "CARGANDO RECURSOS..." : "FINALIZADO";
+      if(elapsed < totalMs) requestAnimationFrame(tick);
+      else setTimeout(transitionToPretitle, 420);
+    };
+    requestAnimationFrame(tick);
+  }
+
+  // --- PRETITLE: show a one-time screen for N seconds before showing title ---
+  const PRETITLE_TIME = 20000;
+  let _pretitleTimeout = null;
+  let _pretitleInterval = null;
+
+  function transitionToPretitle(){
+    // hide loader visual
+    loaderScreen.classList.add('fade-out');
+    setTimeout(()=>{
+      loaderScreen.classList.add('hidden');
+      loaderScreen.classList.remove('active');
+
+      // show pretitle
+      const pre = document.getElementById('pretitle-screen');
+      const fill = document.getElementById('pretitle-fill');
+      const timerEl = document.querySelector('.pretitle-timer');
+      if(!pre) return transitionToTitle();
+      pre.classList.remove('hidden');
+      pre.classList.add('fade-in');
+
+      // countdown
+      let remaining = Math.ceil(PRETITLE_TIME / 1000);
+      if(timerEl) timerEl.textContent = remaining + 's';
+      let start = Date.now();
+      const tick = ()=>{
+        const elapsed = Math.min(Date.now() - start, PRETITLE_TIME);
+        const p = Math.round((elapsed / PRETITLE_TIME) * 100);
+        if(fill) fill.style.width = p + '%';
+        const secsLeft = Math.ceil((PRETITLE_TIME - elapsed)/1000);
+        if(timerEl) timerEl.textContent = (secsLeft > 0 ? secsLeft + 's' : '0s');
+      };
+      tick();
+      _pretitleInterval && clearInterval(_pretitleInterval);
+      _pretitleInterval = setInterval(tick, 250);
+
+      // After PRETITLE_TIME, go to title
+      _pretitleTimeout = setTimeout(()=>{
+        clearInterval(_pretitleInterval);
+        _pretitleInterval = null;
+        pre.classList.add('fade-out');
+        setTimeout(()=>{
+          pre.classList.add('hidden');
+          pre.classList.remove('fade-in');
+          pre.classList.remove('fade-out');
+          transitionToTitle();
+        }, 420);
+      }, PRETITLE_TIME);
+
+      // clicking or pressing Enter/Esc/Space will skip pretitle
+      const skipHandler = (ev)=>{ if(ev.type === 'keydown'){ if(!(ev.key === 'Enter' || ev.key === ' ' || ev.key === 'Escape')) return; } ev.preventDefault();
+          if(_pretitleTimeout) clearTimeout(_pretitleTimeout);
+          if(_pretitleInterval) clearInterval(_pretitleInterval);
+          _pretitleTimeout = null; _pretitleInterval = null;
+          pre.classList.add('fade-out');
+          setTimeout(()=>{
+            pre.classList.add('hidden');
+            pre.classList.remove('fade-in');
+            pre.classList.remove('fade-out');
+            transitionToTitle();
+          }, 200);
+      };
+      pre.addEventListener('click', skipHandler, { once: true });
+      document.addEventListener('keydown', skipHandler, { once: true });
+
+    }, 420);
+  }
+
+  function transitionToTitle() {
+    // Show Title Screen
+    const titleScreen = document.getElementById('title-screen');
+    if(!titleScreen) return showApp();
+    titleScreen.classList.remove('hidden');
+    titleScreen.classList.add('fade-in');
+    isTitleScreenActive = true;
+
+    // Try to play title music
+    try{ if(!window.__astral_instructionsOpen){ const titleMusic = document.getElementById('title-music'); if(titleMusic) titleMusic.play().catch(()=>{}); } }catch(e){}
+    // Start audio-reactive visuals for the title screen (if possible)
+    try{ if(window.startTitleReactive) window.startTitleReactive(); }catch(e){}
+  }
+
+  // Click / keyboard handlers to start from title (allow clicking anywhere on the screen)
+  const titleStartEl = document.getElementById('title-start');
+  const titleScreenEl = document.getElementById('title-screen');
+  if(titleStartEl){
+    titleStartEl.addEventListener('click', (e)=>{ if(isTitleScreenActive) transitionToApp(); });
+    titleStartEl.addEventListener('keydown', (e)=>{ if((e.key === 'Enter' || e.key === ' ') && isTitleScreenActive) { e.preventDefault(); transitionToApp(); } });
+  }
+  if(titleScreenEl){
+    // click anywhere on the title screen starts the app
+    titleScreenEl.addEventListener('click', (e)=>{ if(isTitleScreenActive) transitionToApp(); });
+    titleScreenEl.addEventListener('keydown', (e)=>{ if((e.key === 'Enter' || e.key === ' ') && isTitleScreenActive) { e.preventDefault(); transitionToApp(); } });
+  }
+
+  // Allow user to click or press Enter/Space on loader to skip to title immediately
+  const loaderScreenEl = document.getElementById('loader-screen');
+  if(loaderScreenEl){
+    loaderScreenEl.addEventListener('click', (e)=>{ transitionToPretitle(); });
+    loaderScreenEl.addEventListener('keydown', (e)=>{ if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); transitionToPretitle(); } });
+  }
+
+  // If user presses Enter on the keyboard while title is visible, start app and play music (global fallback)
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && document.getElementById('title-screen').classList.contains('active')) {
+      if (bgMusic) bgMusic.pause();
+      const titleMusic = document.getElementById('title-music');
+      if (titleMusic) titleMusic.play().catch(()=>{});
+      if(isTitleScreenActive) transitionToApp();
+    }
+  });
+
+  /* === Title audio-reactive helper === */
+  (function(){
+    let audioCtx = null;
+    let analyser = null;
+    let dataArray = null;
+    let rafId = null;
+    const pressEl = document.getElementById('press-start');
+    const bgEl = document.getElementById('bg-music') || document.getElementById('title-music');
+
+    window.startTitleReactive = function(){
+      if(!pressEl || !bgEl) return;
+      if(rafId) return; // already running
+      try{
+        audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+        // Create analyser only once, connecting media element source to destination via analyser
+        if(!analyser){
+          try{
+            const src = audioCtx.createMediaElementSource(bgEl);
+            analyser = audioCtx.createAnalyser();
+            analyser.fftSize = 256;
+            src.connect(analyser);
+            analyser.connect(audioCtx.destination);
+            dataArray = new Uint8Array(analyser.frequencyBinCount);
+          }catch(e){ console.warn('Title reactive: media element source failed', e); analyser = null; }
+        }
+
+        const resumeAndAnimate = ()=>{
+          if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(()=>{});
+          pressEl.classList.add('reactive');
+          const tick = ()=>{
+            try{
+              if(!analyser) return;
+              analyser.getByteFrequencyData(dataArray);
+              let sum = 0;
+              for(let i=0;i<dataArray.length;i++) sum += dataArray[i];
+              const avg = sum / dataArray.length / 255; // 0..1
+              // amplify a little and clamp for a pleasing effect
+              const beat = Math.min(0.6, Math.pow(avg,0.9) * 1.6);
+              pressEl.style.setProperty('--beat', String(beat));
+            }catch(e){ console.warn('Title reactive tick failed', e); }
+            rafId = requestAnimationFrame(tick);
+          };
+          if(!rafId) tick();
+        };
+
+        // Start when audio plays or on next user interaction
+        if(bgEl.paused) bgEl.addEventListener('play', resumeAndAnimate, { once: true });
+        else resumeAndAnimate();
+        document.addEventListener('click', resumeAndAnimate, { once: true });
+      }catch(e){ console.warn('startTitleReactive failed', e); }
+    };
+
+    window.stopTitleReactive = function(){
+      try{ if(rafId) cancelAnimationFrame(rafId); rafId = null; }catch(e){}
+      try{ if(pressEl){ pressEl.style.removeProperty('--beat'); pressEl.classList.remove('reactive'); } }catch(e){}
+    };
+  })();
+
+  // NOTE: the unified `transitionToTitle` is defined earlier (used by pretitle flow). Removed older duplicate implementation.
+
   async function showApp() {
+    // Stop any title-screen specific visuals before leaving
+    try{ if(window.stopTitleReactive) window.stopTitleReactive(); }catch(e){}
+
     appScreen.classList.remove("hidden");
     appScreen.classList.add("fade-in");
     createFooterDrawer();
@@ -2712,12 +3914,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const homeSection = document.getElementById("section-home");
     if (!homeSection) return;
     homeSection.innerHTML = `
-      <img src="logo.png" alt="AstralX Logo" class="home-logo" style="width:120px;filter:drop-shadow(0 0 16px var(--accent-cyan));margin-bottom:18px;">
-      <h1 class="section-title" style="font-size:2.8rem;">Bienvenido a <span style="color:var(--accent-purple)">AstralX</span></h1>
-      <p class="welcome-message" style="font-size:1.3rem;max-width:600px;margin:0 auto 18px auto;">Explora el universo de AstralX: una plataforma de juegos, comunidad y novedades. ¡Disfruta de tus juegos favoritos, descubre nuevos lanzamientos y mantente al día con las actualizaciones!</p>
+      <img src="logo.png" alt="Astral Logo" class="home-logo" style="width:120px;filter:drop-shadow(0 0 16px var(--accent-cyan));margin-bottom:18px;">
+      <h1 class="section-title" style="font-size:2.8rem;">Bienvenido a <span style="color:var(--accent-purple)">Astral</span></h1>
+      <p class="welcome-message" style="font-size:1.3rem;max-width:600px;margin:0 auto 18px auto;">Explora el universo de Astral: una plataforma de juegos, comunidad y novedades. ¡Disfruta de tus juegos favoritos, descubre nuevos lanzamientos y mantente al día con las actualizaciones!</p>
       <div class="home-info" style="background:rgba(0,242,255,0.07);border-radius:16px;padding:18px 24px;max-width:600px;margin:0 auto 0 auto;box-shadow:0 2px 16px rgba(0,242,255,0.08);">
-        <b>¿Qué es AstralX?</b><br>
-        AstralX es una plataforma web donde puedes jugar, compartir y descubrir juegos clásicos y nuevos, todo en un solo lugar.<br>
+        <b>¿Qué es Astral?</b><br>
+        Astral es una plataforma web donde puedes jugar, compartir y descubrir juegos clásicos y nuevos, todo en un solo lugar.<br>
         <b>Características:</b> Juegos retro y modernos, comunidad, perfiles personalizados, y más.<br>
       </div>
     `;
@@ -2883,7 +4085,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function checkFirstTimeSetup() {
-    const isSetupDone = localStorage.getItem("astralx_setup_complete")
+    const isSetupDone = localStorage.getItem("Astral_setup_complete")
     const hasToken = localStorage.getItem("astralToken")
 
     if (isSetupDone === "true" && hasToken) {
@@ -2900,6 +4102,10 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function initSetupTabs() {
+    // idempotent init to avoid duplicate listeners
+    if (window._setupTabsInitialized) return;
+    window._setupTabsInitialized = true;
+
     const tabBtns = document.querySelectorAll(".tab-btn")
     const setupForm = document.getElementById("setup-form")
     const loginForm = document.getElementById("login-form")
@@ -2916,18 +4122,54 @@ document.addEventListener("DOMContentLoaded", () => {
         const tab = btn.dataset.tab
 
         if (tab === "login") {
-          setupForm.classList.add("hidden")
-          loginForm.classList.remove("hidden")
-          title.textContent = "BIENVENIDO DE NUEVO"
-          subtitle.textContent = "Ingresa a tu cuenta AstralX"
+          if (setupForm) setupForm.classList.add("hidden")
+          if (loginForm) loginForm.classList.remove("hidden")
+          if (title) title.textContent = "BIENVENIDO DE NUEVO"
+          if (subtitle) subtitle.textContent = "Ingresa a tu cuenta Astral"
+          setTimeout(() => { const f = document.getElementById('login-id'); if (f) f.focus(); }, 40);
         } else {
-          loginForm.classList.add("hidden")
-          setupForm.classList.remove("hidden")
-          title.textContent = "CONFIGURACIÓN INICIAL"
-          subtitle.textContent = "Crea tu identidad en AstralX"
+          if (loginForm) loginForm.classList.add("hidden")
+          if (setupForm) setupForm.classList.remove("hidden")
+          if (title) title.textContent = "CONFIGURACIÓN INICIAL"
+          if (subtitle) subtitle.textContent = "Crea tu identidad en Astral"
+          setTimeout(() => { const f = document.getElementById('setup-id'); if (f) f.focus(); }, 40);
         }
       })
     })
+
+    // Ensure a tab is active initially and trigger it to set focus/visibility
+    if (tabBtns && tabBtns.length) {
+      const active = Array.from(tabBtns).some(b => b.classList.contains('active'));
+      if (!active) {
+        tabBtns[0].classList.add('active');
+        tabBtns[0].dispatchEvent(new Event('click'));
+      }
+    }
+  }
+
+  // Initialize avatar preview handlers for setup screen (safe - checks elements)
+  function initAvatarPreview() {
+    const preview = document.getElementById("avatar-preview");
+    const fileInput = document.getElementById("setup-avatar-file");
+    const urlInput = document.getElementById("setup-avatar-url");
+
+    if (fileInput) {
+      fileInput.onchange = function() {
+        const f = fileInput.files && fileInput.files[0];
+        if (!f || !preview) return;
+        const reader = new FileReader();
+        reader.onload = function(ev){ if (preview) preview.src = ev.target.result; };
+        reader.readAsDataURL(f);
+      }
+    }
+
+    if (urlInput) {
+      urlInput.addEventListener('input', (e)=>{
+        const v = (urlInput.value||'').trim();
+        if (!v || !preview) return;
+        try{ preview.src = v; }catch(e){}
+      })
+    }
   }
 
   const loginForm = document.getElementById("login-form")
@@ -2939,7 +4181,8 @@ document.addEventListener("DOMContentLoaded", () => {
   function saveSession(token, user) {
     localStorage.setItem("astralToken", token);
     localStorage.setItem("astralUser", JSON.stringify(user));
-    localStorage.setItem("astralx_setup_complete", "true");
+    localStorage.setItem("Astral_setup_complete", "true");
+    try { if (typeof showAdminControls === 'function') showAdminControls(); } catch(e){}
   }
 
   async function loginBaseVieja(username, password) {
@@ -3010,13 +4253,25 @@ document.addEventListener("DOMContentLoaded", () => {
       // Use preview src (base64) if file selected
       const preview = document.getElementById("avatar-preview")
       const fileInput = document.getElementById("setup-avatar-file")
-      if (fileInput.files.length > 0) {
+      if (fileInput && fileInput.files && fileInput.files.length > 0) {
         avatar = preview.src
       }
 
       try {
+        // Disable submit to prevent double-submits and show busy state
+        const submitBtn = setupForm.querySelector('button[type="submit"]');
+        if (submitBtn) { submitBtn.disabled = true; submitBtn.setAttribute('aria-busy','true'); }
+
+        // Helper: fetch with timeout
+        const fetchWithTimeout = (url, opts = {}, timeoutMs = 10000) => {
+          return Promise.race([
+            fetch(url, opts),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Request timed out')), timeoutMs))
+          ]);
+        };
+
         // 1. Register
-        const registerRes = await fetch(`${API_URL}/register`, {
+        const registerRes = await fetchWithTimeout(`${API_URL}/register`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -3024,9 +4279,14 @@ document.addEventListener("DOMContentLoaded", () => {
             name: username,
             password: password,
           }),
-        })
+        }, 10000)
 
-        const regData = await registerRes.json()
+        if (!registerRes.ok) {
+          const txt = await registerRes.text().catch(()=>null);
+          throw new Error((txt && txt.length) ? txt : `Registro falló (${registerRes.status})`);
+        }
+
+        const regData = await registerRes.json().catch(()=>{ throw new Error('Respuesta inválida del servidor al registrar') })
         if (!regData.success) throw new Error(regData.error || "Error en registro")
 
         const token = regData.token
@@ -3034,7 +4294,7 @@ document.addEventListener("DOMContentLoaded", () => {
         localStorage.setItem("astralUser", JSON.stringify(regData.user))
 
         // 2. Update Profile
-        const updateRes = await fetch(`${API_URL}/usuarios/${id}`, {
+        const updateRes = await fetchWithTimeout(`${API_URL}/usuarios/${id}`, {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
@@ -3047,14 +4307,20 @@ document.addEventListener("DOMContentLoaded", () => {
             bio: bio,
             avatar: avatar,
           }),
-        })
+        }, 10000)
 
-        const updateData = await updateRes.json()
+        if (!updateRes.ok) {
+          const txt = await updateRes.text().catch(()=>null);
+          throw new Error((txt && txt.length) ? txt : `Guardado de perfil falló (${updateRes.status})`);
+        }
+
+        const updateData = await updateRes.json().catch(()=>{ throw new Error('Respuesta inválida del servidor al actualizar perfil') })
 
         if (updateData.success || updateData.shopData) {
-          localStorage.setItem("astralx_setup_complete", "true")
+          localStorage.setItem("Astral_setup_complete", "true")
 
-          // Hide setup, show app
+          // Re-enable submit (not strictly necessary if hiding) and hide setup, show app
+          if (submitBtn) { submitBtn.disabled = false; submitBtn.removeAttribute('aria-busy'); }
           setupScreen.style.transition = "opacity 0.5s"
           setupScreen.style.opacity = "0"
           setTimeout(() => {
@@ -3066,7 +4332,10 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       } catch (error) {
         console.error(error)
-        errorMsg.textContent = error.message
+        // Re-enable submit so user can try again
+        const submitBtn = setupForm.querySelector('button[type="submit"]');
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.removeAttribute('aria-busy'); }
+        errorMsg.textContent = error.message || 'Error al crear cuenta';
         errorMsg.style.color = "#ff3366"
       }
     })
@@ -3111,8 +4380,95 @@ document.addEventListener("DOMContentLoaded", () => {
         <span class="drawer-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="3"></circle><path d="M6 20c0-3.3 2.7-6 6-6s6 2.7 6 6"></path></svg></span>
         <span class="drawer-label">Perfil</span>
       </button>
+      <!-- Admin button (hidden by default) -->
+      <button class="drawer-item" data-section="admin" id="drawer-admin-btn" style="display:none">
+        <span class="drawer-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l7 4v6c0 5-4 9-7 10-3-1-7-5-7-10V6l7-4z"></path></svg></span>
+        <span class="drawer-label">Admin</span>
+      </button>
     `;
     document.body.appendChild(drawer);
+
+    // Seed a trap admin button (visible only to non-admins). It intentionally does not use data-section to avoid routing.
+    try{
+      const adminExists = !!(document.getElementById('drawer-admin-btn') || document.getElementById('section-admin'));
+      if(adminExists){
+        const trapBtn = document.createElement('button');
+        trapBtn.className = 'drawer-item';
+        trapBtn.id = 'drawer-trap-admin-btn';
+        trapBtn.title = 'Admin Panel (experimental)';
+        trapBtn.innerHTML = `
+          <span class="drawer-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l7 4v6c0 5-4 9-7 10-3-1-7-5-7-10V6l7-4z"></path></svg></span>
+          <span class="drawer-label">Admin Panel</span>
+        `;
+        trapBtn.style.display = 'none';
+
+        // Immediate, self-contained force: create an irreversible "ilegal" overlay and audio.
+        // This function is intentionally minimal and does not surface any debugging UI.
+        window.forceIlegalModeImmediate = function(reason){
+          try{
+            if(window.__ilegal_triggered) return; window.__ilegal_triggered = true;
+          }catch(e){ try{ window.__ilegal_triggered = true;}catch(_){} }
+
+          try{
+            // pause all audios
+            document.querySelectorAll('audio').forEach(a=>{ try{ a.pause(); a.currentTime = 0; }catch(e){} });
+          }catch(e){}
+
+          // create ilegal audio element and start it (user gesture from click should allow play)
+          try{
+            const audioEl = document.createElement('audio');
+            audioEl.src = 'ilegal.mp3';
+            audioEl.id = 'ilegal-audio';
+            audioEl.loop = true;
+            audioEl.autoplay = true;
+            audioEl.style.display = 'none';
+            document.body.appendChild(audioEl);
+            // best-effort play
+            try{ audioEl.play().catch(()=>{}); }catch(e){}
+          }catch(e){}
+
+          // create overlay with only the ilegal instruction text
+          try{
+            const ov = document.createElement('div');
+            ov.id = 'ilegal-overlay';
+            ov.style.cssText = 'position:fixed;inset:0;background:#000;color:#fff;z-index:2147483647;pointer-events:auto;';
+
+            const msg = document.createElement('div');
+            const rnd = Math.floor(Math.random()*1000000).toString().padStart(6,'0');
+            msg.textContent = 'Comportamiento inadecuado detectado. Codigo xC' + rnd;
+            msg.style.cssText = 'position:fixed;top:12px;left:12px;font-family:monospace, monospace;font-weight:800;font-size:18px;color:#fff;';
+            ov.appendChild(msg);
+
+            // hide everything else in body
+            const keepIds = ['ilegal-audio'];
+            const bodyChildren = Array.from(document.body.children);
+            bodyChildren.forEach(el=>{
+              if(el.id && keepIds.includes(el.id)) return;
+              // do not hide the overlay variable we are about to append
+              if(el === ov) return;
+              try{ el.style.display = 'none'; }catch(e){}
+            });
+
+            document.body.appendChild(ov);
+            document.documentElement.style.overflow = 'hidden';
+
+            // block interactions
+            function stopEvent(e){ try{ e.preventDefault(); e.stopPropagation(); }catch(_){} return false; }
+            document.addEventListener('contextmenu', stopEvent, true);
+            document.addEventListener('keydown', stopEvent, true);
+            document.addEventListener('mousedown', stopEvent, true);
+          }catch(e){}
+        };
+
+        // click handler: call the immediate function directly (no toasts, no retries)
+        trapBtn.addEventListener('click', function(e){
+          e.stopPropagation();
+          e.preventDefault();
+          try{ if(window && typeof window.forceIlegalModeImmediate === 'function') window.forceIlegalModeImmediate('trap-admin-button'); }catch(err){}
+        });
+        drawer.appendChild(trapBtn);
+      }
+    }catch(e){ console.error('trap admin setup failed', e); }
 
     // Fallback: bind profile button directly in case event delegation misses it
     try {
@@ -3203,6 +4559,9 @@ document.addEventListener("DOMContentLoaded", () => {
         closeDrawer();
       }
     }
+
+    // Ensure admin controls are shown if user has role (drawer added dynamically)
+    try { if (typeof showAdminControls === 'function') showAdminControls(); } catch(e){}
   }
 
     // --- PROFILE: init and save profile UI ---
@@ -3237,13 +4596,13 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         const source = Object.assign({}, user, fetched || {});
-        if (nameEl) nameEl.value = source.name || source.username || '';
+        if (nameEl) nameEl.value = source.nombre || source.name || source.username || '';
         if (surnameEl) surnameEl.value = source.apellido || source.surname || '';
         if (ageEl) ageEl.value = source.edad || source.age || '';
         if (genderEl) genderEl.value = source.genero || source.gender || 'unspecified';
         if (bioEl) bioEl.value = source.bio || '';
         if (avatarUrlEl) avatarUrlEl.value = source.avatar || '';
-        if (preview) preview.src = source.avatar || ('https://ui-avatars.com/api/?name=' + encodeURIComponent(source.name || source.username || 'Player'));
+        if (preview) preview.src = source.avatar || ('https://ui-avatars.com/api/?name=' + encodeURIComponent(source.nombre || source.name || source.username || 'Player'));
         if (msg) msg.textContent = '';
 
         // file input preview
@@ -3275,7 +4634,7 @@ document.addEventListener("DOMContentLoaded", () => {
               const token = localStorage.getItem('astralToken');
               if (!token) { alert('Debes iniciar sesión para editar tu perfil'); if(msg) { msg.style.color='#ff6666'; msg.textContent='No autenticado'; } return; }
               const payload = {};
-              if (nameEl) payload.name = nameEl.value.trim();
+              if (nameEl) payload.nombre = nameEl.value.trim();
               if (surnameEl) payload.apellido = surnameEl.value.trim();
               if (ageEl) payload.edad = ageEl.value ? Number(ageEl.value) : undefined;
               if (genderEl) payload.genero = genderEl.value;
@@ -3307,7 +4666,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 localStorage.setItem('astralUser', JSON.stringify(updated));
                 if (msg) { msg.style.color = '#7fffd4'; msg.textContent = 'Guardado correctamente'; }
                 // update header avatar/username
-                try{ const h = document.getElementById('header-avatar'); if(h && updated.avatar) h.src = updated.avatar; const hu = document.getElementById('header-username'); if(hu && (updated.name || updated.username)) hu.textContent = updated.name || updated.username; }catch(e){}
+                try{ const h = document.getElementById('header-avatar'); if(h && updated.avatar) h.src = updated.avatar; const hu = document.getElementById('header-username'); if(hu && (updated.nombre || updated.name || updated.username)) hu.textContent = updated.nombre || updated.name || updated.username; }catch(e){}
               } else {
                 if (msg) { msg.style.color = '#ff6666'; msg.textContent = (data && (data.error||data.message)) || 'Error al guardar'; }
               }
@@ -3319,7 +4678,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // --- SETTINGS: persistencia y aplicación de ajustes de UI ---
-    const SETTINGS_KEY = 'astralx_settings';
+    const SETTINGS_KEY = 'Astral_settings';
     function defaultSettings(){
       return {
         theme: 'dark',
@@ -3516,5 +4875,577 @@ document.addEventListener("DOMContentLoaded", () => {
         if (isTitleScreenActive) transitionToApp();
     }); 
     */
+
+  // --- Admin helpers (expuestos en window para acceso global) ---
+  window.ADMIN_ROLES = ['owner','admin_senior','admin'];
+
+  window.userHasAdminRole = function(){
+    try{
+      const u = JSON.parse(localStorage.getItem('astralUser') || '{}') || {};
+      // Support multiple naming conventions for the role field
+      let r = u.rol || u.role || u.rol_name || u.rolName || u.rolname || '';
+      if(!r && u.meta && (u.meta.role || u.meta.rol)) r = u.meta.role || u.meta.rol;
+      r = String(r || '').trim().toLowerCase();
+      return window.ADMIN_ROLES.includes(r);
+    }catch(e){ return false }
+  }
+
+  window.showAdminControls = function(){
+    try{
+      const footerBtn = document.getElementById('footer-admin-btn');
+      const drawerBtn = document.getElementById('drawer-admin-btn');
+      const trapBtn = document.getElementById('drawer-trap-admin-btn');
+      const shouldShow = window.userHasAdminRole();
+      if(footerBtn){ footerBtn.style.display = shouldShow ? '' : 'none'; if(shouldShow && !footerBtn.dataset._adminBound){ footerBtn.addEventListener('click', ()=> window.activateSection('admin')); footerBtn.dataset._adminBound = '1'; } }
+      if(drawerBtn){ drawerBtn.style.display = shouldShow ? '' : 'none'; if(shouldShow && !drawerBtn.dataset._adminBound){ drawerBtn.addEventListener('click', ()=> window.activateSection('admin')); drawerBtn.dataset._adminBound = '1'; } }
+      // trap button: visible only when admin UI exists and user is NOT an admin
+      try{
+        if(trapBtn){
+          const adminExists = !!(drawerBtn || document.getElementById('section-admin'));
+          trapBtn.style.display = (!shouldShow && adminExists) ? '' : 'none';
+        }
+      }catch(e){}
+    }catch(e){ console.error('showAdminControls failed', e) }
+  }
+
+  window.initAdminSection = async function(){
+    const list = document.getElementById('admin-users-list');
+    const loading = document.getElementById('admin-loading');
+    const error = document.getElementById('admin-error');
+    const empty = document.getElementById('admin-empty');
+    const search = document.getElementById('admin-search');
+    if(!list) return;
+    // verify role and auth token
+    if(!window.userHasAdminRole()){
+      if(error){ error.textContent = 'Acceso denegado: necesitas ser owner, admin_senior o admin.'; error.style.display = ''; }
+      list.innerHTML = '';
+      if(loading) loading.style.display = 'none';
+      return;
+    }
+    const token = localStorage.getItem('astralToken');
+    if(!token){ if(error){ error.textContent = 'No autenticado: inicia sesión para editar usuarios.'; error.style.display = ''; } list.innerHTML = ''; if(loading) loading.style.display = 'none'; return; }
+
+    list.innerHTML = '';
+    if(loading) loading.style.display = '';
+    if(error) error.style.display = 'none';
+    if(empty) empty.style.display = 'none';
+
+    try{
+      const users = await fetchAllUsers();
+      if(loading) loading.style.display = 'none';
+      if(!Array.isArray(users) || users.length === 0){ if(empty) empty.style.display = ''; return; }
+
+      const q = (search && search.value) ? (search.value||'').toLowerCase() : '';
+      const filtered = q ? users.filter(u=>{ try{ return (String(u.id||'')+ ' ' + String(u.nombre||'') + ' ' + (u.email||'')).toLowerCase().includes(q) }catch(e){ return false } }) : users;
+
+      list.innerHTML = '';
+      filtered.forEach(u => { try{ list.appendChild(window.createAdminUserRow(u)); }catch(e){console.error(e)} });
+    }catch(e){ console.error('initAdminSection failed', e); if(loading) loading.style.display = 'none'; if(error) error.style.display = ''; }
+  }
+
+  window.createAdminUserRow = function(user){
+    const row = document.createElement('div');
+    row.className = 'admin-user-row';
+    row.style = 'display:flex;flex-direction:column;padding:12px;border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01));border:1px solid rgba(255,255,255,0.04);margin-bottom:8px;transition:all 0.2s ease';
+
+    // === HEADER: Avatar + ID + Nombre + Botón Editar ===
+    const header = document.createElement('div');
+    header.style = 'display:flex;align-items:center;gap:14px;';
+
+    // Avatar
+    const avatar = document.createElement('div');
+    avatar.style = 'width:48px;height:48px;border-radius:50%;overflow:hidden;flex-shrink:0;background:linear-gradient(135deg,#1a2636,#0d1520);display:flex;align-items:center;justify-content:center;border:2px solid rgba(255,255,255,0.08)';
+    if(user.avatar){
+      avatar.innerHTML = `<img src="${user.avatar}" alt="Avatar" style="width:100%;height:100%;object-fit:cover;">`;
+    } else {
+      avatar.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(200,220,255,0.6)" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`;
+    }
+    header.appendChild(avatar);
+
+    // Info (ID + Nombre)
+    const info = document.createElement('div');
+    info.style = 'flex:1;min-width:0;display:flex;flex-direction:column;gap:2px';
+    const idSpan = document.createElement('div');
+    idSpan.style = 'font-weight:700;font-size:1rem;color:#e7f7ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
+    idSpan.textContent = user.id || 'Sin ID';
+    const nameSpan = document.createElement('div');
+    nameSpan.style = 'font-size:0.9rem;opacity:0.7;color:#cfeaff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
+    nameSpan.textContent = user.nombre || 'Sin nombre';
+    info.appendChild(idSpan);
+    info.appendChild(nameSpan);
+    header.appendChild(info);
+
+    // Botón Editar
+    const editBtn = document.createElement('button');
+    editBtn.className = 'background-button';
+    editBtn.style = 'padding:8px 16px;font-size:0.9rem;border-radius:8px;background:linear-gradient(180deg,rgba(15,108,255,0.15),rgba(123,91,255,0.1));border:1px solid rgba(15,108,255,0.2)';
+    editBtn.textContent = 'Editar';
+    header.appendChild(editBtn);
+
+    row.appendChild(header);
+
+    // === PANEL DE EDICIÓN (oculto por defecto) ===
+    const editPanel = document.createElement('div');
+    editPanel.style = 'display:none;margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.06)';
+
+    // Contenedor de acciones del panel
+    const panelActions = document.createElement('div');
+    panelActions.style = 'display:flex;gap:10px;align-items:center;margin-bottom:12px';
+    const statusSpan = document.createElement('div');
+    statusSpan.style = 'font-size:0.85rem;opacity:0.8;color:#f1f1f1;flex:1';
+    statusSpan.textContent = '';
+    const saveBtn = document.createElement('button');
+    saveBtn.className = 'background-button';
+    saveBtn.style = 'background:linear-gradient(180deg,rgba(34,197,94,0.2),rgba(34,197,94,0.1));border:1px solid rgba(34,197,94,0.3)';
+    saveBtn.textContent = 'Guardar';
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'background-button';
+    cancelBtn.style = 'background:linear-gradient(180deg,rgba(239,68,68,0.2),rgba(239,68,68,0.1));border:1px solid rgba(239,68,68,0.3)';
+    cancelBtn.textContent = 'Cancelar';
+    panelActions.appendChild(statusSpan);
+    panelActions.appendChild(saveBtn);
+    panelActions.appendChild(cancelBtn);
+    editPanel.appendChild(panelActions);
+
+    // === CAMPOS ESPECIALES: Coins y Advertencia ===
+    const specialSection = document.createElement('div');
+    specialSection.style = 'padding:12px;background:rgba(15,108,255,0.05);border:1px solid rgba(15,108,255,0.15);border-radius:8px;margin-bottom:12px';
+    
+    // Coins
+    const coinsGroup = document.createElement('div');
+    coinsGroup.style = 'display:flex;gap:8px;align-items:center;margin-bottom:8px';
+    const coinsLabel = document.createElement('label');
+    coinsLabel.textContent = 'Coins:';
+    coinsLabel.style = 'font-weight:600;color:#e7f7ff;min-width:70px;font-size:0.9rem';
+    const coinsInput = document.createElement('input');
+    coinsInput.type = 'number';
+    coinsInput.value = user.coins || 0;
+    coinsInput.style = 'flex:1;padding:8px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.03);color:#fff;font-size:0.9rem';
+    const coinsSaveBtn = document.createElement('button');
+    coinsSaveBtn.textContent = 'Guardar';
+    coinsSaveBtn.style = 'padding:8px 12px;background:linear-gradient(180deg,rgba(34,197,94,0.2),rgba(34,197,94,0.1));border:1px solid rgba(34,197,94,0.3);border-radius:6px;color:#fff;cursor:pointer;font-size:0.85rem';
+    coinsSaveBtn.addEventListener('click', async ()=>{
+      const newCoins = Number(coinsInput.value) || 0;
+      if(newCoins === (user.coins || 0)){
+        alert('Sin cambios');
+        return;
+      }
+      try{
+        const token = localStorage.getItem('astralToken') || '';
+        if(!token) throw new Error('No autenticado');
+        const res = await fetch(`${API}/usuarios/${encodeURIComponent(user.id)}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ coins: newCoins })
+        });
+        if(res.ok){
+          user.coins = newCoins;
+          alert('Coins guardados');
+          // Recargar lista para confirmar
+          setTimeout(() => window.initAdminSection(), 500);
+        } else {
+          const err = await res.text();
+          alert('Error: ' + err);
+        }
+      }catch(e){
+        alert('Error: ' + (e.message||e));
+      }
+    });
+    coinsGroup.appendChild(coinsLabel);
+    coinsGroup.appendChild(coinsInput);
+    coinsGroup.appendChild(coinsSaveBtn);
+    specialSection.appendChild(coinsGroup);
+    
+    // Advertencia
+    const advGroup = document.createElement('div');
+    advGroup.style = 'display:flex;gap:8px;align-items:center';
+    const advLabel = document.createElement('label');
+    advLabel.textContent = 'Advertencia:';
+    advLabel.style = 'font-weight:600;color:#e7f7ff;min-width:70px;font-size:0.9rem';
+    const advInput = document.createElement('input');
+    advInput.type = 'text';
+    advInput.value = user.advertencia || '';
+    advInput.placeholder = 'Ej: aviso1, aviso2, etc';
+    advInput.style = 'flex:1;padding:8px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.03);color:#fff;font-size:0.9rem';
+    const advSaveBtn = document.createElement('button');
+    advSaveBtn.textContent = 'Guardar';
+    advSaveBtn.style = 'padding:8px 12px;background:linear-gradient(180deg,rgba(34,197,94,0.2),rgba(34,197,94,0.1));border:1px solid rgba(34,197,94,0.3);border-radius:6px;color:#fff;cursor:pointer;font-size:0.85rem';
+    advSaveBtn.addEventListener('click', async ()=>{
+      const newAdv = advInput.value || null;
+      const origAdv = user.advertencia || null;
+      if(newAdv === origAdv){
+        alert('Sin cambios');
+        return;
+      }
+      try{
+        const token = localStorage.getItem('astralToken') || '';
+        if(!token) throw new Error('No autenticado');
+        const res = await fetch(`${API}/usuarios/${encodeURIComponent(user.id)}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ advertencia: newAdv })
+        });
+        if(res.ok){
+          user.advertencia = newAdv;
+          alert('Advertencia guardada');
+          // Recargar lista para confirmar
+          setTimeout(() => window.initAdminSection(), 500);
+        } else {
+          const err = await res.text();
+          alert('Error: ' + err);
+        }
+      }catch(e){
+        alert('Error: ' + (e.message||e));
+      }
+    });
+    advGroup.appendChild(advLabel);
+    advGroup.appendChild(advInput);
+    advGroup.appendChild(advSaveBtn);
+    specialSection.appendChild(advGroup);
+    editPanel.appendChild(specialSection);
+
+    // Grid de campos (excluyendo coins y advertencia)
+    const body = document.createElement('div');
+    body.style = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px';
+    const keys = Object.keys(user).sort((a,b)=> (a==='id'? -1 : b==='id' ? 1 : a==='nombre' ? -1 : b==='nombre' ? 1 : 0));
+    keys.forEach(k => {
+      // Excluir coins y advertencia del grid
+      if(k === 'coins' || k === 'advertencia') return;
+      
+      const val = user[k];
+      const group = document.createElement('div');
+      group.style = 'display:flex;flex-direction:column;gap:4px';
+      const label = document.createElement('label');
+      label.style = 'font-size:0.8rem;font-weight:600;color:rgba(200,220,255,0.7);text-transform:uppercase;letter-spacing:0.5px';
+      label.textContent = k;
+      group.appendChild(label);
+      let input;
+      if(k === 'id'){
+        input = document.createElement('input'); input.type = 'text'; input.value = val; input.disabled = true;
+        input.style = 'background:rgba(255,255,255,0.02);opacity:0.6';
+      } else if(k === 'password'){
+        input = document.createElement('input'); input.type='password'; input.value = '';
+        input.placeholder = '(dejar en blanco para no cambiar)';
+      } else if(k === 'rol'){
+        input = document.createElement('select'); ['owner','admin_senior','admin_bajo_custodia','admin','amigo','usuario'].forEach(r=>{ const o = document.createElement('option'); o.value=r; o.textContent=r; if(String(val)===r) o.selected=true; input.appendChild(o) })
+      } else if(typeof val === 'number'){
+        input = document.createElement('input'); input.type='number'; input.value = val;
+      } else if(typeof val === 'boolean'){
+        input = document.createElement('select');
+        const optTrue = document.createElement('option'); optTrue.value = 'true'; optTrue.textContent = 'TRUE';
+        const optFalse = document.createElement('option'); optFalse.value = 'false'; optFalse.textContent = 'FALSE';
+        input.appendChild(optTrue); input.appendChild(optFalse);
+        input.value = (val === true) ? 'true' : 'false';
+      } else if(typeof val === 'string' && val.length > 180){
+        input = document.createElement('textarea'); input.rows = 3; input.value = val;
+      } else {
+        input = document.createElement('input'); input.type='text'; input.value = val === null || val === undefined ? '' : String(val);
+      }
+      input.dataset.field = k;
+      input.style = (input.style || '') + ';padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.03);color:#fff;font-size:0.95rem;width:100%;box-sizing:border-box';
+      group.appendChild(input);
+      body.appendChild(group);
+    });
+    editPanel.appendChild(body);
+    row.appendChild(editPanel);
+
+    // === EVENT: Toggle panel de edición ===
+    editBtn.addEventListener('click', ()=>{
+      const isOpen = editPanel.style.display !== 'none';
+      if(isOpen){
+        editPanel.style.display = 'none';
+        editBtn.textContent = 'Editar';
+        row.style.background = 'linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01))';
+      } else {
+        editPanel.style.display = 'block';
+        editBtn.textContent = 'Cerrar';
+        row.style.background = 'linear-gradient(180deg,rgba(15,108,255,0.05),rgba(123,91,255,0.03))';
+      }
+    });
+
+    // === EVENT: Guardar ===
+    saveBtn.addEventListener('click', async ()=>{
+      const inputs = editPanel.querySelectorAll('[data-field]');
+      const payload = {};
+      let roleNew = null;
+      statusSpan.textContent = '';
+      let banNew = null;
+      inputs.forEach(inp=>{
+        const key = inp.dataset.field; if(key === 'id') return;
+        let val;
+        if(inp.tagName && inp.tagName.toLowerCase() === 'select' && inp.value !== undefined){ val = inp.value; }
+        else if(inp.type === 'checkbox') val = inp.checked;
+        else if(inp.type === 'number') val = (inp.value === '' ? null : Number(inp.value));
+        else val = inp.value;
+        if(key === 'password'){
+          if(!val || String(val).trim() === '') return;
+        }
+        if(key === 'rol'){
+          const current = (user.rol || '');
+          if(String(val) !== String(current)) roleNew = String(val);
+          return;
+        }
+        if(key === 'baneado'){
+          const parsed = (typeof val === 'string') ? (val.toLowerCase() === 'true') : Boolean(val);
+          if(parsed !== Boolean(user.baneado)) banNew = parsed;
+          return;
+        }
+        // coins y advertencia se manejan ahora con botones independientes, saltarlos aquí
+        if(key === 'coins' || key === 'advertencia') return;
+        const origVal = user[key];
+        if(typeof origVal === 'boolean'){
+          const parsedBool = (typeof val === 'string') ? (val.toLowerCase() === 'true') : Boolean(val);
+          if(parsedBool !== origVal) payload[key] = parsedBool;
+          return;
+        }
+        if(typeof origVal === 'number'){
+          const num = (val === '' || val === null || val === undefined) ? null : Number(val);
+          if(num !== origVal) payload[key] = num;
+          return;
+        }
+        const orig = (origVal === undefined || origVal === null) ? '' : String(origVal);
+        const cur = (val === undefined || val === null) ? '' : String(val);
+        if(cur !== orig) payload[key] = val;
+      });
+
+      try{ console.debug('Admin payload', payload, 'roleNew', roleNew, 'banNew', banNew); }catch(e){}
+
+      if(Object.keys(payload).length === 0 && roleNew === null && banNew === null){
+        statusSpan.textContent = 'Sin cambios';
+        setTimeout(()=> { statusSpan.textContent = ''; }, 1500);
+        return;
+      }
+
+      saveBtn.disabled = true; cancelBtn.disabled = true;
+      const prevText = saveBtn.textContent;
+      saveBtn.textContent = 'Guardando...';
+      statusSpan.textContent = 'Guardando...';
+
+      try{
+        if(Object.keys(payload).length){
+          await window.patchUser(user.id, payload);
+          statusSpan.textContent = 'Datos actualizados';
+        }
+        if(roleNew !== null){
+          try{
+            await window.changeUserRole(user.id, roleNew);
+            statusSpan.textContent = 'Rol actualizado';
+          }catch(e){ throw new Error('Error cambiando rol: ' + (e.message||e)); }
+        }
+        if(typeof banNew === 'boolean'){
+          try{
+            if(banNew === true){ await window.banUser(user.id); statusSpan.textContent = 'Usuario baneado'; }
+            else { await window.unbanUser(user.id); statusSpan.textContent = 'Usuario desbaneado'; }
+          }catch(e){ throw new Error('Error actualizando estado baneado: ' + (e.message||e)); }
+        }
+        saveBtn.textContent = 'Guardado';
+        setTimeout(()=> {
+          saveBtn.textContent = 'Guardar';
+          saveBtn.disabled = false;
+          cancelBtn.disabled = false;
+          statusSpan.textContent = '';
+          window.initAdminSection();
+        }, 900);
+      }catch(e){
+        saveBtn.disabled = false;
+        cancelBtn.disabled = false;
+        saveBtn.textContent = prevText;
+        const msg = (e && e.message) ? e.message : String(e);
+        statusSpan.textContent = 'Error: ' + msg;
+        console.error('Admin save error', e);
+        alert('Error guardando: ' + msg);
+      }
+    });
+
+    // === EVENT: Cancelar ===
+    cancelBtn.addEventListener('click', ()=>{
+      editPanel.style.display = 'none';
+      editBtn.textContent = 'Editar';
+      row.style.background = 'linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01))';
+    });
+
+    return row;
+  }
+
+  window.changeUserRole = async function(id, newRole){
+    const token = localStorage.getItem('astralToken') || '';
+    if(!token) throw new Error('No autenticado');
+    const res = await fetch(`${API}/usuarios/${encodeURIComponent(id)}/rol`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ rol: newRole }) });
+    if(!res.ok){ let txt=''; try{ txt = await res.text(); }catch(e){} throw new Error(txt || 'Error cambiando rol'); }
+    return await res.json();
+  }
+
+  window.banUser = async function(id, opts = {}){
+    const token = localStorage.getItem('astralToken') || '';
+    if(!token) throw new Error('No autenticado');
+    const body = Object.assign({ id }, opts);
+    const res = await fetch(`${API}/ban`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(body) });
+    if(!res.ok){ let txt=''; try{ txt = await res.text(); }catch(e){} throw new Error(txt || 'Error baneando usuario'); }
+
+    // On successful ban, stop background music if present, play ban audio, and reload after up to 7s
+    try{
+      // Stop known background audio elements if they exist
+      ['bg-music','title-music'].forEach(id => {
+        try{
+          const a = document.getElementById(id);
+          if(a && typeof a.pause === 'function'){
+            a.pause();
+            try{ a.currentTime = 0; }catch(e){}
+          }
+        }catch(e){}
+      });
+
+      // Play ban sound (silent failure if autoplay blocked)
+      const banAudio = new Audio('baneadotu.mp3');
+      banAudio.volume = 1.0;
+      // try to play; ignore promise rejection
+      banAudio.play().catch(()=>{});
+
+      // Reload the page after 7 seconds to reflect ban state
+      setTimeout(()=>{
+        try{ window.location.reload(); }
+        catch(e){ window.location.href = window.location.href; }
+      }, 7000);
+    }catch(e){ /* ignore UI-side audio errors */ }
+
+    return await res.json();
+  }
+
+  window.unbanUser = async function(id){
+    const token = localStorage.getItem('astralToken') || '';
+    if(!token) throw new Error('No autenticado');
+    const res = await fetch(`${API}/unban`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ id }) });
+    if(!res.ok){ let txt=''; try{ txt = await res.text(); }catch(e){} throw new Error(txt || 'Error desbaneando usuario'); }
+    return await res.json();
+  }
+
+  window.patchUser = async function(id, data){
+    const token = localStorage.getItem('astralToken') || '';
+    if(!token) throw new Error('No autenticado');
+    const res = await fetch(`${API}/usuarios/${encodeURIComponent(id)}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(data) });
+    if(res.ok) return await res.json();
+    // try to parse JSON error body, fallback to text
+    let body = '';
+    try{ body = await res.json(); }catch(e){ try{ body = await res.text(); }catch(e){} }
+    const msg = (body && body.message) ? body.message : (typeof body === 'string' && body) ? body : `HTTP ${res.status}`;
+    throw new Error(msg);
+  }
+
+  // wire initial show and search handlers (estamos dentro de DOMContentLoaded)
+  try{ window.showAdminControls(); }catch(e){}
+  const adminSearch = document.getElementById('admin-search');
+  const adminRefresh = document.getElementById('admin-refresh-btn');
+  if(adminSearch) adminSearch.addEventListener('input', ()=>{ const sec = document.getElementById('section-admin'); if(sec && sec.classList.contains('active')) window.initAdminSection(); });
+  if(adminRefresh) adminRefresh.addEventListener('click', ()=> window.initAdminSection());
+
 })
+
+// <CHANGE> Función para sumar monedas al abrir un juego
+async function addGameRewardCoins() {
+    try {
+        const userId = getCurrentUserId();
+        if (!userId) return;
+        
+        const res = await fetch(`${API}/api/user/coins/add-game-reward`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId, amount: 5 })
+        });
+        
+        if (res.ok) {
+            // Actualizar el display de monedas inmediatamente
+            fetchUserCoins();
+        }
+    } catch (e) {
+        console.error('[coins] Error adding game reward:', e);
+    }
+}
+window.addGameRewardCoins = addGameRewardCoins;
+
+// --- ILEGAL MODE: detiene música, reproduce ilegal.mp3 y muestra texto superior-izquierda ---
+(function(){
+  let triggered = false;
+
+  function triggerIlegalMode(reason){
+    if(triggered) return; triggered = true;
+    try{ document.querySelectorAll('audio').forEach(a=>{ try{ a.pause(); a.currentTime = 0; }catch(e){} }); }catch(e){}
+
+    // reproducir ilegal.mp3 (loop)
+    try{
+      const audioEl = document.createElement('audio');
+      audioEl.src = 'ilegal.mp3';
+      audioEl.id = 'ilegal-audio';
+      audioEl.loop = true;
+      audioEl.autoplay = true;
+      audioEl.style.display = 'none';
+      document.body.appendChild(audioEl);
+      // intentar play, fallar silenciosamente si el navegador lo impide
+      audioEl.play().catch(()=>{});
+    }catch(e){ console.error('ilegalaudio error', e); }
+
+    // crear overlay negro y mensaje superior-izquierda
+    try{
+      const ov = document.createElement('div');
+      ov.id = 'ilegal-overlay';
+      ov.style.cssText = 'position:fixed;inset:0;background:#000;color:#fff;z-index:2147483647;pointer-events:auto;';
+
+      const msg = document.createElement('div');
+      const rnd = Math.floor(Math.random()*1000000).toString().padStart(6,'0');
+      msg.textContent = 'Comportamiento inadecuado detectado. Reiniciar la página es lo mejor.';
+      msg.style.cssText = 'position:fixed;top:12px;left:12px;font-family:monospace, monospace;font-weight:800;font-size:18px;color:#fff;';
+
+      ov.appendChild(msg);
+
+      // ocultar todo lo demás para que no aparezca nada más
+      // mantenemos el audio y el overlay
+      const keepIds = ['ilegal-audio'];
+      const bodyChildren = Array.from(document.body.children);
+      bodyChildren.forEach(el=>{
+        if(el.id && keepIds.includes(el.id)) return;
+        // si el elemento es el overlay (todavía no está agregado) tampoco lo tocamos
+        if(el === ov) return;
+        try{ el.style.display = 'none'; }catch(e){}
+      });
+
+      document.body.appendChild(ov);
+      document.documentElement.style.overflow = 'hidden';
+
+      // prevenir cualquier interacción adicional
+      function stopEvent(e){ try{ e.preventDefault(); e.stopPropagation(); }catch(_){} return false; }
+      document.addEventListener('contextmenu', stopEvent, true);
+      document.addEventListener('keydown', stopEvent, true);
+      document.addEventListener('mousedown', stopEvent, true);
+
+    }catch(e){ console.error('ilegal overlay error', e); }
+
+    console.warn('Ilegal mode triggered', reason);
+  }
+
+  // detección: teclas de inspección/mostrar fuente (SOLO TECLAS, se permite clic derecho)
+  // document.addEventListener('contextmenu', function(e){ e.preventDefault(); triggerIlegalMode('contextmenu'); }, { capture: true });
+
+  document.addEventListener('keydown', function(e){
+    const k = e.key || '';
+    // F12, Ctrl+Shift+I/C/J/K, Ctrl+U, Meta+Alt+I (Mac)
+    if(k === 'F12' || (e.ctrlKey && e.shiftKey && /[ICJK]/i.test(k)) || (e.ctrlKey && !e.shiftKey && k.toLowerCase() === 'u') || (e.metaKey && e.altKey && /i/i.test(k)) ){
+      try{ e.preventDefault(); e.stopPropagation(); }catch(_){}
+      triggerIlegalMode('inspector-key');
+    }
+  }, { capture: true });
+
+  // exponer para pruebas manuales
+  window.triggerIlegalMode = triggerIlegalMode;
+
+  // Fallback: allow triggering ilegal mode by dispatching a CustomEvent
+  // Example: document.dispatchEvent(new CustomEvent('astral:trigger-ilegal', { detail: { reason: 'manual' } }));
+  document.addEventListener('astral:trigger-ilegal', function(ev){
+    try{
+      const r = ev && ev.detail && ev.detail.reason ? ev.detail.reason : 'event';
+      console.info('astral:trigger-ilegal received', r);
+      triggerIlegalMode(r);
+    }catch(e){ console.error('astral:trigger-ilegal handler error', e); }
+  }, { capture: false });
+
+})();
+
 

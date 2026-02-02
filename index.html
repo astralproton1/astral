@@ -2,11 +2,13 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <link rel="manifest" href="/manifest.json">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AstralX</title>
+    <title>Astral</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="overrides.css">
     <link rel="icon" href="logo.png" type="image/png">
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@700;800&display=swap" rel="stylesheet">
     <style>
     /* Iframe overlay + sidebar (minimal, tweak in style.css later if desired) */
     #game-iframe-overlay{position:fixed;inset:0;background:rgba(4,6,12,0.85);backdrop-filter:blur(6px);z-index:99998;display:flex;align-items:center;justify-content:center;padding:18px}
@@ -32,6 +34,51 @@
     .settings-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:14px}
     .settings-card h3{margin:0 0 6px 0}
     @media(max-width:720px){.settings-grid{grid-template-columns:1fr}}
+
+    /* === PANTALLA DE INSTRUCCIONES (rediseño Paint) === */
+    .game-instructions{position:fixed;inset:0;z-index:100003;background:#000;opacity:0;visibility:hidden;transition:opacity 340ms ease,visibility 340ms ease}
+    .game-instructions.show{opacity:1;visibility:visible}
+    .game-instructions.hidden{display:none}
+
+    .instructions-card{width:100%;height:100%;background:#000;color:#fff;display:flex;flex-direction:column;border-top:4px solid #fff;border-bottom:4px solid #fff;overflow:hidden}
+
+    /* HEADER */
+    .instructions-top{display:flex;align-items:center;gap:18px;padding:16px 24px;border-bottom:4px solid #fff;background:#000}
+    .instr-logo{width:72px;height:72px;object-fit:contain;border-radius:12px;background:#000000;flex-shrink:0}
+    .instr-title-wrap{flex:1;text-align:center}
+    .instr-timer{font-family:Oswald,Arial,sans-serif;font-size:1.1rem;color:#fff;margin-bottom:4px}
+    .instr-game-title{font-family:Oswald,Arial,sans-serif;font-size:clamp(32px,8vw,80px);font-weight:800;margin:0;line-height:1}
+
+    /* BODY: 2 columnas */
+    .instructions-body{flex:1;display:flex;border-bottom:4px solid #fff;overflow:hidden}
+    .instr-left{flex:1;padding:20px 24px;display:flex;flex-direction:column;border-right:4px solid #fff;overflow-y:auto}
+    .instr-right{width:45%;min-width:300px;display:flex;align-items:center;justify-content:center;padding:12px;background:#000}
+
+    .instr-section-title{font-family:Oswald,Arial,sans-serif;font-size:1.3rem;font-weight:700;margin:0 0 12px 0;color:#fff;text-decoration:underline}
+    .instr-text{color:#fff;font-size:1.1rem;line-height:1.5}
+
+    /* VIDEO */
+    .instr-video-wrap{width:100%;height:100%;display:flex;align-items:center;justify-content:center}
+    .instr-video-container{position:relative;width:100%;height:100%;background:#000;border-radius:8px;overflow:hidden}
+    .instr-video{width:100%;height:100%;object-fit:cover}
+    .instr-video-placeholder{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.2rem;text-align:center;padding:20px}
+    #instr-overlay-play{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.6);border:none;color:#fff;padding:16px;border-radius:50%;font-size:1.4rem;display:none;cursor:pointer}
+
+    /* FOOTER */
+    .instructions-bottom{padding:16px 24px;background:#000;display:flex;flex-direction:column;gap:12px}
+    .instr-bottom-content{flex:1}
+    .instr-bottom-text{max-height:80px;overflow-y:auto}
+    .instr-actions-row{display:flex;align-items:center;gap:12px}
+    .instr-countdown-bar{flex:1;height:8px;background:rgba(255,255,255,0.1);border-radius:4px;overflow:hidden}
+    #instr-countdown-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--accent-cyan,#0f6cff),var(--accent-purple,#7b5bff));transition:width 0.4s linear}
+
+    /* RESPONSIVE */
+    @media(max-width:768px){
+    .instructions-body{flex-direction:column}
+    .instr-left{border-right:none;border-bottom:4px solid #fff}
+    .instr-right{width:100%;min-width:0;height:200px}
+    .instr-game-title{font-size:clamp(24px,6vw,48px)}
+}
     </style>
 </head>
 <body>
@@ -41,23 +88,69 @@
     </audio>
 
     <!-- Pantalla de Carga -->
-    <div class="screen-container active" id="loader-screen">
-        <img src="logo.png" alt="AstralX Logo" class="logo loading-logo">
+    <div class="screen-container active clickable-screen" id="loader-screen" role="status" aria-live="polite" tabindex="0" aria-label="Saltar carga">
         
-        <div class="loading-bar-container">
-            <div class="loading-light"></div>
+        <div class="new-loader-content">
+            <div class="new-loader-text">
+                <div class="new-loader-title">CARGANDO</div>
+                <div class="new-loader-subtitle" id="loading-status">Preparando recursos del sistema...</div>
+            </div>
+            <div class="new-loader-percent" id="loading-percent">0%</div>
+        </div>
+
+        <div class="new-loader-bar-container">
+            <div class="new-loader-bar" id="loading-light"></div>
+        </div>
+
+    </div>
+
+    <!-- Pantalla previa al Título (advertencia 20s) -->
+    <div class="screen-container hidden clickable-screen" id="pretitle-screen" tabindex="0" aria-label="Informacion previa al inicio (clic para saltar)">
+    
+    <div class="warning-fullscreen-content">
+        <div class="warning-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+            <line x1="12" y1="9" x2="12" y2="13"></line>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
         </div>
         
-        <div class="status-text">CARGANDO RECURSOS...</div>
+        <h2 class="warning-title">ATENCIÓN</h2>
+        
+        <p class="warning-text">Esta pagina contiene juegos que pueden hablar de temas de suicidio, autolesiones, bullying, acoso escolar y otros temas delicados. Favor de no jugar dichos juegos si no estás seguro de lo que estás haciendo.</p>
+        
+        <div class="warning-skip">Haz clic o pulsa Enter/Esc para saltar</div>
+    </div>
+    
+    <div class="warning-bottom-bar">
+        <div class="warning-timer-text"><span class="pretitle-timer">20s</span></div>
+        <div class="warning-progress-container">
+        <div class="warning-progress-fill" id="pretitle-fill"></div>
+        </div>
+    </div>
+    
     </div>
 
     <!-- Pantalla de Título (Inicialmente oculta) -->
-    <div class="screen-container hidden" id="title-screen">
-        <div class="title-content">
-            <img src="logo.png" alt="AstralX Logo" class="logo title-logo">
-            <h1 class="game-title">Astral <span class="highlight">X</span></h1>
-            <p class="press-start">PRESIONA <span class="key-hint">ENTER</span></p>
+    <div class="screen-container hidden clickable-screen" id="title-screen" tabindex="0" aria-label="Iniciar Astral (clic para empezar)">
+        
+        <!-- Logo y nombre arriba a la izquierda -->
+        <div class="title-header-left">
+            <img src="logo.png" alt="Astral Logo" id="title-logo" class="title-logo-redesign">
+            <div class="title-brand-name">Astral</div>
         </div>
+        
+        <!-- Contenido central vacío para empujar el press-start hacia abajo -->
+        <div class="title-spacer"></div>
+        
+        <!-- Texto de presionar enter en la parte inferior -->
+        <div class="title-bottom-area" id="title-start" tabindex="-1" role="button" aria-hidden="true">
+            <p id="press-start" class="press-start-redesign" role="status" aria-live="polite">
+                <span class="press-text">PRESIONA <span class="key-hint">ENTER</span> O PRESIONA AQUI CON TU CURSOR O TACTIL PARA COMENZAR</span>
+            </p>
+        </div>
+        
     </div>
 
     <!-- Setup Screen OOBE -->
@@ -71,7 +164,7 @@
 
             <div class="setup-header">
                 <h2 id="setup-title">CONFIGURACIÓN INICIAL</h2>
-                <p id="setup-subtitle">Crea tu identidad en AstralX</p>
+                <p id="setup-subtitle">Crea tu identidad en Astral</p>
             </div>
             
             <!-- Added Login Form (Hidden by default) -->
@@ -128,10 +221,8 @@
                         <div class="input-group">
                             <label>Sexo</label>
                             <select id="setup-gender">
-                                <option value="unspecified">Prefiero no decir</option>
                                 <option value="male">Masculino</option>
                                 <option value="female">Femenino</option>
-                                <option value="other">Otro</option>
                             </select>
                         </div>
                         <div class="input-group full-width">
@@ -148,8 +239,6 @@
                         <img id="avatar-preview" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzQxNjllMSIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxwYXRoIGQ9Ik0yMCAyMXYtMmEtNCA0IDAgMCAwLTQtNEg4YS00IDQgMCAwIDAtNCA0djIiPjwvcGF0aD48Y2lyY2xlIGN4PSIxMiIgY3k9IjciIHI9IjQiPjwvY2lyY2xlPjwvc3ZnPg==" alt="Avatar Preview">
                         <div class="avatar-inputs">
                             <input type="text" id="setup-avatar-url" placeholder="URL de la imagen (https://...)">
-                            <span class="or-divider">- O -</span>
-                            <input type="file" id="setup-avatar-file" accept="image/*">
                         </div>
                     </div>
                 </div>
@@ -177,29 +266,53 @@
             <div class="header-left">
                 <div class="user-profile-mini">
                     <img id="header-avatar" src="data:image/svg+xml;base64,PHN2Zy..." alt="User">
-                    <span id="header-username">Player</span>
+                <span id="header-username">Player</span>
+                </div>
+                <div class="header-coins" id="header-coins-container">
+                    <svg class="coin-icon" viewBox="0 0 24 24">
+                        <!-- Sombra exterior -->
+                        <circle cx="12" cy="13" r="9" fill="rgba(0,0,0,0.3)"/>
+                        <!-- Base de la moneda -->
+                        <circle cx="12" cy="12" r="9" fill="url(#coinGradient)"/>
+                        <!-- Borde interior -->
+                        <circle cx="12" cy="12" r="7.5" fill="none" stroke="rgba(255,220,100,0.4)" stroke-width="0.8"/>
+                        <!-- Estrella central -->
+                        <polygon points="12,6 13.5,10 18,10.5 14.5,13.5 15.5,18 12,15.5 8.5,18 9.5,13.5 6,10.5 10.5,10" fill="rgba(255,255,220,0.95)"/>
+                        <!-- Brillo superior -->
+                        <ellipse cx="9" cy="9" rx="3" ry="2" fill="rgba(255,255,255,0.25)"/>
+                        <!-- Definición del gradiente -->
+                        <defs>
+                            <linearGradient id="coinGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" stop-color="#FFE066"/>
+                                <stop offset="50%" stop-color="#FFD700"/>
+                                <stop offset="100%" stop-color="#CC9900"/>
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                    <span id="header-coins-count">0</span>
                 </div>
                 <div class="header-actions">
-                    <button class="icon-btn" id="btn-friends" title="Amigos">
+                    <button class="header-btn" id="btn-friends" title="Amigos">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                        <span class="btn-label">Amigos</span>
                         <span id="friend-requests-indicator" class="friend-requests-indicator" style="display:none;"></span>
                     </button>
-                    <button class="icon-btn" id="btn-ads" title="Anuncios">
+                    <button class="header-btn" id="btn-ads" title="Anuncios">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
+                        <span class="btn-label">Anuncios</span>
                     </button>
-                    <button class="icon-btn" id="btn-messages" title="Mensajes">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-                    </button>
-                    <button class="icon-btn" id="btn-bugs" title="Reportar Bugs">
+                    <button class="header-btn" id="btn-bugs" title="Reportar Bugs">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                        <span class="btn-label">Reportar</span>
                     </button>
-                    <button class="icon-btn" id="btn-settings" title="Configuración">
+                    <button class="header-btn" id="btn-settings" title="Configuración">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"></path><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33"></path></svg>
+                        <span class="btn-label">Ajustes</span>
                     </button>
                 </div>
             </div>
             <div class="header-right">
-                <span class="header-title">AstralX</span>
+                <span class="header-title">Astral</span>
             </div>
         </header>
         <div class="content">
@@ -207,32 +320,36 @@
                 <div class="main-content" id="main-content">
                     <!-- Sección Inicio mejorada -->
                     <div id="section-home" class="content-section active">
-                        <div class="home-hero" style="flex-direction:column;align-items:center;justify-content:flex-start;margin-top:60px;gap:32px;width:100%;">
-                            <h1 class="home-title" style="font-size:4.2rem;text-align:center;margin-bottom:12px;margin-top:0;line-height:1.08;max-width:900px;">Bienvenido a <span class="home-title-highlight">AstralX</span></h1>
-                            <p class="home-desc" style="font-size:1.45rem;text-align:center;max-width:700px;margin-bottom:24px;">Explora el universo de juegos, música y comunidad.<br>AstralX es el sucesor de <a href="https://astralproton.github.io/astral" target="_blank">AstralProton</a>. Esta nueva versión arregla todos los errores de la anterior y agrega muchas funciones nuevas, mejor diseño y más diversión.</p>
-                            <div class="home-info-cards" style="justify-content:center;width:100%;max-width:1100px;">
-                                <div class="home-info-card">
-                                    <h2>Bienvenido de vuelta...</h2>
-                                    <p>Tu nuevo portal de juegos, mejorado y con más posibilidades.</p>
-                                </div>
-                                <div class="home-info-card">
-                                    <h2>+100 Juegos</h2>
-                                    <p>Desde clásicos retro hasta novedades modernas, todo en un solo lugar.</p>
-                                </div>
-                                <div class="home-info-card">
-                                    <h2>Comunidad ""Activa""</h2>
-                                    <p>Comparte, compite y haz amigos en nuestra plataforma social integrada. (Es broma el server de discord esta bien muerto)</p>
-                                </div>
-                                <div class="home-info-card">
-                                    <h2>Personalización</h2>
-                                    <p>Perfila tu avatar, logros y preferencias para una experiencia única.</p>
+                        <div class="home-hero">
+                            <div class="hero-content">
+                                <h1 class="home-title-highlight">Bienvenido a Astral</h1>
+                                <p class="home-desc">Explora el universo de los juegos web. Astral es una web pensada para dispositivos de gama baja con una interfaz limpia y rápida. Usa la flecha azul para abrir menús y navegar.</p>
+                                <div class="hero-cta-row">
                                 </div>
                             </div>
-                        </div>
 
-                        <div class="home-footer-info">
-                            <span>Desarrollado por GalavDev &copy; 2025</span>
-                            <span>Versión Alpha</span>
+                            <div class="home-info-grid" role="list">
+                                <div class="home-info-card" role="listitem">
+                                    <h3>Bienvenido de vuelta</h3>
+                                    <p>Tu portal de juegos, mejorado y con más posibilidades.</p>
+                                </div>
+                                <div class="home-info-card" role="listitem">
+                                    <h3>+100 Juegos</h3>
+                                    <p>Clásicos retro y novedades modernas, todos en un solo lugar.</p>
+                                </div>
+                                <div class="home-info-card" role="listitem">
+                                    <h3>Comunidad</h3>
+                                    <p>Comparte y compite con otros players — integración social ligera.</p>
+                                </div>
+                                <div class="home-info-card" role="listitem">
+                                    <h3>Personalización</h3>
+                                    <p>Perfil, logros y ajustes para adaptar la experiencia a ti.</p>
+                                </div>
+                            </div>
+
+                            <div class="home-footer-info">
+                                <span>Versión 1.0 - Build P-1.0</span>
+                            </div>
                         </div>
                     </div>
                     <!-- Sección de juegos: duplicada desde Inicio y preparada para mostrar tarjetas anchas -->
@@ -253,7 +370,7 @@
                     <!-- Sección comunidad funcional -->
                     <div id="section-community" class="content-section">
                         <div class="community-header-bar">
-                            <span class="community-title">Comunidad AstralX</span>
+                            <span class="community-title">Comunidad Astral</span>
                             <span class="community-desc">Conoce y conecta con otros jugadores</span>
                         </div>
                         <div class="community-users-list"></div>
@@ -289,10 +406,8 @@
                                         <div class="input-group">
                                             <label>Sexo</label>
                                             <select id="profile-gender">
-                                                <option value="unspecified">Prefiero no decir</option>
                                                 <option value="male">Masculino</option>
                                                 <option value="female">Femenino</option>
-                                                <option value="other">Otro</option>
                                             </select>
                                         </div>
                                         <div class="input-group full-width">
@@ -309,11 +424,6 @@
                                             <label>URL de avatar</label>
                                             <input type="text" id="profile-avatar-url" placeholder="https://...">
                                         </div>
-                                        <div style="width:100%;text-align:center;">- O -</div>
-                                        <div style="width:100%;">
-                                            <label>Subir imagen</label>
-                                            <input type="file" id="profile-avatar-file" accept="image/*">
-                                        </div>
                                     </div>
                                 </div>
 
@@ -324,6 +434,26 @@
                             </form>
                         </div>
                     </div>
+
+                    <!-- Sección Admin: solo visible para roles owner/admin/admin_senior -->
+                    <div id="section-admin" class="content-section" style="padding:28px;">
+                        <div style="max-width:1100px;margin:0 auto;background:linear-gradient(165deg,rgba(18,19,26,0.95),rgba(15,23,36,0.98));padding:24px;border-radius:12px;border:1px solid rgba(255,255,255,0.04);">
+                            <h2 style="margin:0 0 12px;font-size:1.6rem;">Panel de Administración</h2>
+                            <p style="margin:0 0 18px;color:rgba(200,220,255,0.7);">Acceso restringido: solo owner, admin_senior o admin. Aquí puedes ver y editar todos los registros de la tabla <code>usuarios</code>.</p>
+                            
+                            <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px;">
+                            <input id="admin-search" placeholder="Buscar por id o nombre..." style="flex:1;padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:rgba(255,255,255,0.02);color:#fff">
+                            <button id="admin-refresh-btn" class="background-button">Refrescar</button>
+                            </div>
+                            
+                            <div id="admin-loading" style="display:none;margin:8px 0;color:var(--accent-cyan);">Cargando usuarios...</div>
+                            <div id="admin-error" style="display:none;margin:8px 0;color:#ff8a8a;">Error al cargar usuarios.</div>
+                            <div id="admin-empty" style="display:none;margin:8px 0;color:rgba(200,220,255,0.7);">No hay usuarios registrados.</div>
+                            
+                            <div id="admin-users-list" class="admin-users-list" style="display:flex;flex-direction:column;gap:12px;margin-top:12px;max-height:60vh;overflow:auto"></div>
+                        </div>
+                    </div>
+
                     <!-- Modales para perfil y solicitud de amistad -->
                     <div id="userProfileModal" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.85);z-index:99999;align-items:center;justify-content:center;">
                         <div style="background:var(--card-bg,#181c2f);border-radius:18px;padding:2rem;max-width:600px;width:90%;max-height:80vh;overflow-y:auto;position:relative;border:2px solid var(--accent-color,#4169e1);">
@@ -381,18 +511,18 @@
                 </div>
             </div>
         </div>
-        <!-- Visual para la música (puedes personalizarlo luego) -->
-        <div id="music-visual" style="position:absolute;top:30px;right:30px;z-index:20;"></div>
     </div>
 
         <!-- Settings Section previously duplicated; removed from here (moved into #main-content) -->
     <!-- Footer (styled by settings) -->
     <footer id="footer-drawer" class="footer-drawer bottom-nav" style="position:fixed;left:0;right:0;bottom:0;height:56px;display:flex;align-items:center;justify-content:center;background:#0b0d12;color:#e7f7ff;z-index:9999;border-top:1px solid rgba(255,255,255,0.03);">
         <div style="width:100%;max-width:1200px;padding:0 14px;display:flex;align-items:center;justify-content:space-between;">
-            <div style="font-size:0.95rem;opacity:0.9;">© AstralX</div>
+            <div style="font-size:0.95rem;opacity:0.9;">© Astral</div>
             <div style="display:flex;gap:8px;align-items:center;opacity:0.9;">
-                <button class="background-button" style="padding:8px 10px;font-size:0.9rem;">Ayuda</button>
+                <button class="background-button drawer-item" data-section="ayuda" style="padding:8px 10px;font-size:0.9rem;">Ayuda</button>
                 <button class="background-button" style="padding:8px 10px;font-size:0.9rem;">Soporte</button>
+                <!-- Admin button: hidden by default, shown only for owner/admin/admin_senior -->
+                <button id="footer-admin-btn" class="background-button drawer-item" data-section="admin" style="display:none;padding:8px 10px;font-size:0.9rem;">Admin</button>
             </div>
         </div>
     </footer>
@@ -421,27 +551,42 @@
     </div>
     <!-- Messages Panel (modal) -->
     <div id="messagesPanel" style="display:none;position:fixed;z-index:100000;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.85);align-items:center;justify-content:center;">
-        <div class="friends-panel-modal" style="max-width:1100px;width:96%;height:85vh;display:flex;position:relative;">
-            <button onclick="closeMessagesPanel()" class="friends-panel-close" style="position:absolute;right:12px;top:12px;">&times;</button>
-            <aside style="width:320px;border-right:1px solid rgba(255,255,255,0.04);padding:12px;overflow:auto;background:linear-gradient(180deg,#091018,#071024);border-radius:10px;">
-                <h3 style="margin-top:0;color:#e7f7ff">Conversaciones</h3>
-                <div id="conversationsList" style="display:flex;flex-direction:column;gap:8px;margin-top:8px;"></div>
+        <div class="chat-container">
+            <!-- Mover el botón cerrar a la izquierda para evitar solapado con controles del header -->
+            <button onclick="closeMessagesPanel()" class="friends-panel-close chat-close-btn" aria-label="Cerrar chat">&times;</button>
+            
+            <!-- CONTACTOS A LA IZQUIERDA -->
+            <aside class="chat-sidebar">
+                <h3 class="chat-sidebar-title">Conversaciones</h3>
+                <div id="conversationsList" class="conversations-list"></div>
             </aside>
-            <main style="flex:1;display:flex;flex-direction:column;background:linear-gradient(180deg,#07121a,#04101a);padding:12px;border-radius:10px;margin-left:12px;">
-                <div id="chatHeader" style="padding:8px 12px;border-bottom:1px solid rgba(255,255,255,0.03);font-weight:700;color:#fff;display:flex;align-items:center;justify-content:space-between;">
-                    <div id="chatHeaderTitle">Selecciona una conversación</div>
-                    <div style="display:flex;gap:8px;align-items:center;">
-                        <button id="chatReloadBtn" class="background-button" title="Recargar conversación" style="padding:6px 8px;min-width:38px;">⟳</button>
+            
+            <!-- CHAT A LA DERECHA -->
+            <main class="chat-main-panel">
+                <div id="chatHeader" class="chat-header">
+                    <!-- Title + conversation warning badge -->
+                    <div id="chatHeaderTitle" class="chat-title-wrap">
+                      <div id="chatTitleText" class="chat-title-text">Selecciona una conversación</div>
+                      <div id="chatWarning" class="chat-conversation-warning" role="note" aria-hidden="true">
+                        <svg class="chat-warn-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" fill="#ef4444"/><path d="M12 9v4" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 17h.01" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        <span class="chat-warn-text">Los chats se restablecen cada fin de mes</span>
+                      </div>
                     </div>
+                    <button id="chatReloadBtn" class="background-button chat-reload-btn" title="Recargar conversación" aria-label="Recargar conversación">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M21 12a9 9 0 10-3.1 6.6L21 12z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </button>
                 </div>
-                <div id="chatMessages" style="flex:1;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:8px;"></div>
-                <div style="display:flex;gap:8px;padding-top:10px;">
-                    <input id="chatInput" type="text" placeholder="Escribe un mensaje..." style="flex:1;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:rgba(0,0,0,0.25);color:#fff;" />
-                    <button id="chatSendBtn" class="background-button primary">Enviar</button>
+                <div id="chatMessages" class="chat-messages-area"></div>
+                <div class="chat-input-container">
+                    <input id="chatInput" type="text" placeholder="Escribe un mensaje..." class="chat-input" />
+                    <button id="chatSendBtn" class="background-button primary chat-send-btn" title="Enviar mensaje" aria-label="Enviar mensaje">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M22 2L11 13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                      <span class="sr-only">Enviar</span>
+                    </button>
                 </div>
             </main>
         </div>
-    </div>
+    </div>  
         <!-- Overlay para abrir juegos en iframe fullscreen -->
         <div id="game-iframe-overlay" class="hidden" aria-hidden="true">
             <div class="iframe-toggle-arrow" id="iframe-toggle-arrow" title="Abrir menú">
@@ -460,6 +605,56 @@
                                         </div>
                 </div>
             </aside>
+        </div>
+
+        <!-- INSTRUCCIONES: pantalla que aparece antes de entrar al juego -->
+        <div id="game-instructions-modal" class="game-instructions hidden" aria-hidden="true">
+        <audio id="instructions-audio" loop preload="auto">
+            <source src="instrucciones.mp3" type="audio/mpeg">
+        </audio>
+        <div class="instructions-card" role="dialog" aria-modal="true" aria-label="Instrucciones del juego">
+            
+            <!-- HEADER: Logo + Timer + Título -->
+            <div class="instructions-top">
+            <img id="instr-logo" class="instr-logo" src="logo.png" alt="logo">
+            <div class="instr-title-wrap">
+                <div id="instr-timer" class="instr-timer">0s</div>
+                <h1 id="instr-game-title" class="instr-game-title">(Nombre del juego)</h1>
+            </div>
+            </div>
+
+            <!-- CUERPO: Controles (izq) + Video (der) -->
+            <div class="instructions-body">
+            <div class="instr-left">
+                <h2 class="instr-section-title">Controles especiales:</h2>
+                <div id="instr-top-text" class="instr-text">{Aqui pongo los controles especificos}</div>
+            </div>
+            <div class="instr-right">
+                <div class="instr-video-wrap">
+                <div class="instr-video-container">
+                    <video id="instr-video" class="instr-video" playsinline muted loop>Tu navegador no soporta video.</video>
+                    <div id="instr-video-placeholder" class="instr-video-placeholder">Si ves esta pantalla, no hay un video disponible para tu juego.</div>
+                    <button id="instr-overlay-play" aria-hidden="true">▶</button>
+                </div>
+                </div>
+            </div>
+            </div>
+
+            <!-- FOOTER: Instrucciones de juego + Barra de progreso -->
+            <div class="instructions-bottom">
+            <div class="instr-bottom-content">
+                <h2 class="instr-section-title">Instrucciones:</h2>
+                <div id="instr-bottom-text" class="instr-text instr-bottom-text">{Aqui pongo como jugar, asegurate de que dure este campo completo}</div>
+            </div>
+            <div class="instr-actions-row">
+                <button id="instr-skip-btn" class="background-button">Saltar instrucciones</button>
+                <div id="instr-countdown-bar" class="instr-countdown-bar">
+                <div id="instr-countdown-fill"></div>
+                </div>
+            </div>
+            </div>
+
+        </div>
         </div>
 
                 <!-- Toast breve para confirmaciones (mostrado por script.js) -->
@@ -481,8 +676,8 @@
                                     const motivo = data.motivo_ban || 'No hay motivo especificado';
                                     const until = data.ban_until ? new Date(data.ban_until).toLocaleString() : 'Indefinido / permanente';
                                     // Simple ban UI (reemplaza body)
-                                    document.title = 'Cuenta baneada - AstralX';
-                                    const banHtml = `\n                    <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#07070b,#0f1220);color:#e7f7ff;padding:24px;">\n                      <div style="max-width:900px;width:100%;background:linear-gradient(180deg,#091019,#06101a);border-radius:12px;padding:22px;border:1px solid rgba(255,255,255,0.04);">\n                        <h1 style="margin:0 0 8px;color:#ff7b7b">Tu cuenta ha sido baneada</h1>\n                        <p style="margin:0 0 12px;">Lo sentimos, tu acceso a AstralX ha sido restringido.</p>\n                        <div style="background:rgba(255,255,255,0.03);padding:12px;border-radius:8px;margin-top:8px;">\n                          <strong>Motivo:</strong><div style="margin-top:6px;">${String(motivo).replace(/</g,'&lt;')}</div>\n                        </div>\n                        <div style="margin-top:10px;color:rgba(200,220,255,0.75)">\n                          <strong>Vigencia:</strong> ${String(until).replace(/</g,'&lt;')}\n                        </div>\n                        <div style="display:flex;gap:10px;margin-top:16px;">\n                          <button id="__ban_join_discord" style="padding:10px 14px;border-radius:8px;background:#2b6cff;border:none;color:#fff;cursor:pointer">Unirme al Discord</button>\n                          <button id="__ban_retry" style="padding:10px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:#fff;cursor:pointer">Reintentar verificación</button>\n                        </div>\n                        <div style="margin-top:12px;font-size:0.9rem;color:rgba(200,220,255,0.7);">Si crees que esto es un error, unete al Discord o intenta apelar cuando sea posible.</div>\n                      </div>\n                    </div>\n                  `;
+                                    document.title = 'Cuenta baneada - Astral';
+                                    const banHtml = `\n                    <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#07070b,#0f1220);color:#e7f7ff;padding:24px;">\n                      <div style="max-width:900px;width:100%;background:linear-gradient(180deg,#091019,#06101a);border-radius:12px;padding:22px;border:1px solid rgba(255,255,255,0.04);">\n                        <h1 style="margin:0 0 8px;color:#ff7b7b">Tu cuenta ha sido baneada</h1>\n                        <p style="margin:0 0 12px;">Lo sentimos, tu acceso a Astral ha sido restringido.</p>\n                        <div style="background:rgba(255,255,255,0.03);padding:12px;border-radius:8px;margin-top:8px;">\n                          <strong>Motivo:</strong><div style="margin-top:6px;">${String(motivo).replace(/</g,'&lt;')}</div>\n                        </div>\n                        <div style="margin-top:10px;color:rgba(200,220,255,0.75)">\n                          <strong>Vigencia:</strong> ${String(until).replace(/</g,'&lt;')}\n                        </div>\n                        <div style="display:flex;gap:10px;margin-top:16px;">\n                          <button id="__ban_join_discord" style="padding:10px 14px;border-radius:8px;background:#2b6cff;border:none;color:#fff;cursor:pointer">Unirme al Discord</button>\n                          <button id="__ban_retry" style="padding:10px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:#fff;cursor:pointer">Reintentar verificación</button>\n                        </div>\n                        <div style="margin-top:12px;font-size:0.9rem;color:rgba(200,220,255,0.7);">Si crees que esto es un error, unete al Discord o intenta apelar cuando sea posible.</div>\n                      </div>\n                    </div>\n                  `;
                                     document.body.innerHTML = banHtml;
                                     const j = document.getElementById('__ban_join_discord'); if (j) j.addEventListener('click', ()=> window.open('https://discord.gg/GEPrCZkWhs','_blank'));
                                     const r = document.getElementById('__ban_retry'); if (r) r.addEventListener('click', ()=> location.reload());
@@ -492,6 +687,16 @@
                     })();
                 </script>
                 <script src="script.js"></script>
-        <script src="script-iframe.js"></script>
+                <script src="script-iframe.js"></script>
+                <script src="game-instructions-list.js"></script>
+                <script src="notices-reporting.js"></script>
+                <script src="reports.js"></script>
+        <script>
+            if ("serviceWorker" in navigator) {
+                navigator.serviceWorker.register("/sw.js")
+                .then(() => console.log("Service Worker registrado"));
+            }
+        </script>
+
 </body>
 </html>
