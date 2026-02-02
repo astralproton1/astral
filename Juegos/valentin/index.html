@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>San Valentín</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #ff6b6b, #ff8e8e, #ffc0cb);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+        }
+
+        .container {
+            text-align: center;
+            padding: 40px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            max-width: 90%;
+        }
+
+        .heart {
+            font-size: 80px;
+            animation: pulse 1s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        h1 {
+            color: #e74c3c;
+            font-size: 2.5rem;
+            margin: 20px 0;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .name-input-container {
+            margin-bottom: 20px;
+        }
+
+        .name-input-container label {
+            display: block;
+            color: #e74c3c;
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+        }
+
+        .name-input {
+            padding: 12px 20px;
+            font-size: 1rem;
+            border: 2px solid #ffc0cb;
+            border-radius: 25px;
+            outline: none;
+            width: 250px;
+            text-align: center;
+            transition: border-color 0.3s;
+        }
+
+        .name-input:focus {
+            border-color: #e74c3c;
+        }
+
+        .start-btn {
+            margin-top: 15px;
+            padding: 12px 30px;
+            font-size: 1rem;
+            border: none;
+            border-radius: 25px;
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .start-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4);
+        }
+
+        .buttons {
+            display: flex;
+            flex-direction: row;
+            gap: 20px;
+            justify-content: center;
+            align-items: center;
+            margin-top: 30px;
+            min-height: 60px;
+        }
+
+        .btn {
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn-si {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            color: white;
+            box-shadow: 0 4px 15px rgba(46, 204, 113, 0.4);
+        }
+
+        .btn-si:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(46, 204, 113, 0.6);
+        }
+
+        .btn-no {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+            box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4);
+            pointer-events: none;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+
+        .celebration {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .celebration.show {
+            display: flex;
+        }
+
+        .celebration h2 {
+            color: #e74c3c;
+            font-size: 2rem;
+            margin-top: 20px;
+        }
+
+        .celebration .hearts {
+            font-size: 60px;
+            animation: bounce 0.5s ease-in-out infinite alternate;
+        }
+
+        @keyframes bounce {
+            from { transform: translateY(0); }
+            to { transform: translateY(-20px); }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .confetti {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            top: -10px;
+            animation: fall 3s linear forwards;
+        }
+
+        @keyframes fall {
+            to {
+                transform: translateY(100vh) rotate(720deg);
+                opacity: 0;
+            }
+        }
+
+        .question-screen {
+            display: none;
+        }
+
+        .question-screen.show {
+            display: block;
+        }
+
+        .name-screen.hidden {
+            display: none;
+        }
+
+        .results-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            font-size: 0.9rem;
+            border: none;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #e74c3c;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .results-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .results-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .results-modal.show {
+            display: flex;
+        }
+
+        .results-content {
+            background: white;
+            padding: 30px 40px;
+            border-radius: 20px;
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .results-content h2 {
+            color: #e74c3c;
+            margin-bottom: 20px;
+        }
+
+        .results-content p {
+            font-size: 1.1rem;
+            color: #333;
+            margin: 10px 0;
+        }
+
+        .results-content .result-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 15px;
+            background: #f9f9f9;
+            border-radius: 10px;
+            margin: 10px 0;
+        }
+
+        .results-content .result-label {
+            font-weight: bold;
+            color: #e74c3c;
+        }
+
+        .results-content .result-value {
+            color: #333;
+        }
+
+        .results-content .no-results {
+            color: #999;
+            font-style: italic;
+        }
+
+        .close-btn {
+            margin-top: 20px;
+            padding: 10px 25px;
+            font-size: 1rem;
+            border: none;
+            border-radius: 25px;
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+
+        .close-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .rejection {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .rejection.show {
+            display: flex;
+        }
+
+        .rejection h2 {
+            color: #666;
+            font-size: 2rem;
+            margin-top: 20px;
+        }
+
+        .rejection .sad-face {
+            font-size: 60px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="heart">&#10084;&#65039;</div>
+        
+        <div class="name-screen" id="nameScreen">
+            <h1>San Valentin</h1>
+            <div class="name-input-container">
+                <label for="nameInput">Escribe el nombre de esa persona especial:</label>
+                <input type="text" id="nameInput" class="name-input" placeholder="Nombre..." maxlength="30">
+                <br>
+                <button class="start-btn" onclick="startQuestion()">Continuar</button>
+            </div>
+        </div>
+
+        <div class="question-screen" id="questionScreen">
+            <h1 id="questionTitle">¿Quieres ser mi San Valentin?</h1>
+            
+            <div class="buttons" id="buttons">
+                <button class="btn btn-si" id="btnSi" onclick="acceptValentine()">Si</button>
+                <button class="btn btn-no" id="btnNo">No</button>
+            </div>
+
+            <div class="celebration" id="celebration">
+                <div class="hearts">&#128149;&#128150;&#128149;</div>
+                <h2 id="celebrationText">¡Sabia que dirias que si!</h2>
+            </div>
+
+            <div class="rejection" id="rejection">
+                <div class="sad-face">:(</div>
+                <h2>Chale :(</h2>
+            </div>
+        </div>
+    </div>
+
+    <button class="results-btn" onclick="showResults()">Ver Resultados</button>
+
+    <div class="results-modal" id="resultsModal">
+        <div class="results-content">
+            <h2>Resultados</h2>
+            <div id="resultsBody">
+            </div>
+            <button class="close-btn" onclick="closeResults()">Cerrar</button>
+        </div>
+    </div>
+
+    <script>
+        const btnNo = document.getElementById('btnNo');
+        const btnSi = document.getElementById('btnSi');
+        const buttonsContainer = document.getElementById('buttons');
+        const celebration = document.getElementById('celebration');
+        const nameInput = document.getElementById('nameInput');
+        const nameScreen = document.getElementById('nameScreen');
+        const questionScreen = document.getElementById('questionScreen');
+        const questionTitle = document.getElementById('questionTitle');
+        const celebrationText = document.getElementById('celebrationText');
+        const resultsModal = document.getElementById('resultsModal');
+        const resultsBody = document.getElementById('resultsBody');
+        
+        const escapeDistance = 100;
+        let personName = '';
+        
+        function setCookie(name, value, days) {
+            const expires = new Date();
+            expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000));
+            document.cookie = name + '=' + encodeURIComponent(value) + ';expires=' + expires.toUTCString() + ';path=/';
+        }
+        
+        function getCookie(name) {
+            const nameEQ = name + '=';
+            const ca = document.cookie.split(';');
+            for (let i = 0; i < ca.length; i++) {
+                let c = ca[i];
+                while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+                if (c.indexOf(nameEQ) === 0) return decodeURIComponent(c.substring(nameEQ.length, c.length));
+            }
+            return null;
+        }
+        
+        function startQuestion() {
+            personName = nameInput.value.trim();
+            if (personName) {
+                setCookie('valentine_name', personName, 365);
+                questionTitle.textContent = personName + ', ¿quieres ser mi San Valentin?';
+                celebrationText.textContent = '¡Sabia que dirias que si, ' + personName + '!';
+            }
+            nameScreen.classList.add('hidden');
+            questionScreen.classList.add('show');
+        }
+
+        nameInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                startQuestion();
+            }
+        });
+        
+        function getRandomPosition() {
+            const btnRect = btnNo.getBoundingClientRect();
+            
+            const maxX = window.innerWidth - btnRect.width - 20;
+            const maxY = window.innerHeight - btnRect.height - 20;
+            
+            let newX = Math.random() * maxX;
+            let newY = Math.random() * maxY;
+            
+            newX = Math.max(20, Math.min(newX, maxX));
+            newY = Math.max(20, Math.min(newY, maxY));
+            
+            return { x: newX, y: newY };
+        }
+        
+        function moveButton() {
+            const pos = getRandomPosition();
+            btnNo.style.position = 'fixed';
+            btnNo.style.left = pos.x + 'px';
+            btnNo.style.top = pos.y + 'px';
+            btnNo.style.transition = 'all 0.15s ease-out';
+        }
+        
+        function checkProximity(e) {
+            const btnRect = btnNo.getBoundingClientRect();
+            const btnCenterX = btnRect.left + btnRect.width / 2;
+            const btnCenterY = btnRect.top + btnRect.height / 2;
+            
+            const mouseX = e.clientX;
+            const mouseY = e.clientY;
+            
+            const distance = Math.sqrt(
+                Math.pow(mouseX - btnCenterX, 2) + 
+                Math.pow(mouseY - btnCenterY, 2)
+            );
+            
+            if (distance < escapeDistance) {
+                moveButton();
+            }
+        }
+        
+        document.addEventListener('mousemove', checkProximity);
+        
+        document.addEventListener('touchstart', function(e) {
+            const touch = e.touches[0];
+            checkProximity({ clientX: touch.clientX, clientY: touch.clientY });
+        }, { passive: true });
+        
+        document.addEventListener('touchmove', function(e) {
+            const touch = e.touches[0];
+            checkProximity({ clientX: touch.clientX, clientY: touch.clientY });
+        }, { passive: true });
+        
+        function acceptValentine() {
+            setCookie('valentine_response', 'Si', 365);
+            buttonsContainer.classList.add('hidden');
+            btnNo.classList.add('hidden');
+            celebration.classList.add('show');
+            createConfetti();
+        }
+        
+        function secretNo() {
+            const savedName = getCookie('valentine_name') || personName || 'Sin nombre';
+            setCookie('valentine_name', savedName, 365);
+            setCookie('valentine_response', 'No', 365);
+            
+            buttonsContainer.classList.add('hidden');
+            btnNo.classList.add('hidden');
+            celebration.classList.add('hidden');
+            document.getElementById('rejection').classList.add('show');
+            
+            if (!questionScreen.classList.contains('show')) {
+                nameScreen.classList.add('hidden');
+                questionScreen.classList.add('show');
+            }
+        }
+        
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.shiftKey && (e.key === 'h' || e.key === 'H')) {
+                e.preventDefault();
+                secretNo();
+            }
+        });
+        
+        function showResults() {
+            const savedName = getCookie('valentine_name');
+            const savedResponse = getCookie('valentine_response');
+            
+            if (savedName || savedResponse) {
+                resultsBody.innerHTML = `
+                    <div class="result-item">
+                        <span class="result-label">Nombre:</span>
+                        <span class="result-value">${savedName || 'No registrado'}</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">Respuesta:</span>
+                        <span class="result-value">${savedResponse || 'Sin respuesta'}</span>
+                    </div>
+                `;
+            } else {
+                resultsBody.innerHTML = '<p class="no-results">No hay resultados guardados todavia.</p>';
+            }
+            
+            resultsModal.classList.add('show');
+        }
+        
+        function closeResults() {
+            resultsModal.classList.remove('show');
+        }
+        
+        resultsModal.addEventListener('click', function(e) {
+            if (e.target === resultsModal) {
+                closeResults();
+            }
+        });
+        
+        function createConfetti() {
+            const colors = ['#ff6b6b', '#ff8e8e', '#ffc0cb', '#e74c3c', '#f39c12', '#9b59b6'];
+            
+            for (let i = 0; i < 50; i++) {
+                setTimeout(() => {
+                    const confetti = document.createElement('div');
+                    confetti.className = 'confetti';
+                    confetti.style.left = Math.random() * 100 + 'vw';
+                    confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                    confetti.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
+                    confetti.style.animationDuration = (Math.random() * 2 + 2) + 's';
+                    document.body.appendChild(confetti);
+                    
+                    setTimeout(() => confetti.remove(), 4000);
+                }, i * 50);
+            }
+        }
+    </script>
+</body>
+</html>
