@@ -240,23 +240,14 @@
           if(placeholder) placeholder.style.display = 'none';
           if(instrVideo){
             instrVideo.style.display = 'block';
-            instrVideo.muted = true; // ensure muted so autoplay works
-            instrVideo.removeAttribute('controls');
             instrVideo.src = data.video;
-            instrVideo.load();
-            // try to autoplay; if it fails, show overlay play button so user can start
-            instrVideo.play().then(()=>{
-              if(overlayPlay) overlayPlay.style.display = 'none';
-              if(playBtn) playBtn.textContent = '⏸';
-            }).catch(()=>{
-              if(overlayPlay) overlayPlay.style.display = 'block';
-              if(playBtn) playBtn.textContent = '▶';
-            });
-            instrVideo.autoplay = true; instrVideo.loop = true;
+            instrVideo.alt = data.title || 'Vista previa del juego';
+            // Image (WebP) shows immediately
+            if(overlayPlay) overlayPlay.style.display = 'none';
           }
         }catch(e){}
       } else {
-        try{ if(placeholder) placeholder.style.display = 'flex'; if(instrVideo){ instrVideo.pause(); instrVideo.removeAttribute('src'); instrVideo.load(); instrVideo.style.display = 'none'; } }catch(e){}
+        try{ if(placeholder) placeholder.style.display = 'flex'; if(instrVideo){ instrVideo.removeAttribute('src'); instrVideo.style.display = 'none'; } }catch(e){}
       }
       // timer
       let remaining = (typeof data.timerSecs === 'number') ? data.timerSecs : (parseInt(data.timerSecs) || 150);
@@ -306,7 +297,7 @@
           // stop media
           try{ if(instrAudio){ instrAudio.pause(); instrAudio.currentTime = 0; } }catch(e){}
           try{
-            if(instrVideo){ instrVideo.pause(); instrVideo.currentTime = 0; instrVideo.removeAttribute('src'); instrVideo.load(); }
+            if(instrVideo){ instrVideo.removeAttribute('src'); instrVideo.style.display = 'none'; }
             if(typeof overlayPlay !== 'undefined' && overlayPlay) overlayPlay.style.display = 'none';
             // remove any transition overlay if still present
             try{ const of = document.getElementById('instr-fade-overlay'); if(of && of.parentNode){ of.parentNode.removeChild(of); } }catch(e){}
@@ -363,22 +354,21 @@
       instrModal.addEventListener('click', modalClickHandler);
       document.addEventListener('keydown', modalKeyHandler);
 
-      // Play / Pause control
-      function togglePlay(){ try{ if(!instrVideo) return; if(instrVideo.paused){ instrVideo.play().then(()=>{ userPaused = false; if(playBtn) playBtn.textContent = '⏸'; if(overlayPlay) overlayPlay.style.display = 'none'; startCountdown(); }).catch(()=>{ if(overlayPlay) overlayPlay.style.display = 'block'; }); } else { instrVideo.pause(); userPaused = true; if(playBtn) playBtn.textContent = '▶'; if(overlayPlay) overlayPlay.style.display = 'block'; } }catch(e){} }
+      // Play / Pause control (not needed for images, but keep handlers simple)
+      function togglePlay(){ try{ if(!instrVideo) return; if(instrVideo.src){ userPaused = !userPaused; if(userPaused){ startCountdown(); } } }catch(e){} }
       // Attach named handlers so we can detach them on close
       const playBtnHandler = (e)=>{ e.stopPropagation(); togglePlay(); };
       const overlayPlayHandler = (e)=>{ e.stopPropagation(); togglePlay(); };
-      const muteHandler = (e)=>{ e.stopPropagation(); try{ if(!instrVideo) return; instrVideo.muted = !instrVideo.muted; muteBtn.textContent = instrVideo.muted ? '🔇' : '🔊'; muteBtn.setAttribute('aria-pressed', String(!instrVideo.muted)); }catch(e){} };
+      const muteHandler = (e)=>{ e.stopPropagation(); };
       const skipHandler = (e)=>{ e.stopPropagation(); closeAndResolve('start'); };
-      const videoPauseHandler = ()=>{ userPaused = true; if(playBtn) playBtn.textContent = '▶'; if(overlayPlay) overlayPlay.style.display = 'block'; };
-      const videoPlayHandler = ()=>{ userPaused = false; if(playBtn) playBtn.textContent = '⏸'; if(overlayPlay) overlayPlay.style.display = 'none'; startCountdown(); };
+      const videoPauseHandler = ()=>{ userPaused = true; };
+      const videoPlayHandler = ()=>{ userPaused = false; startCountdown(); };
 
       if(playBtn) playBtn.addEventListener('click', playBtnHandler);
       if(overlayPlay) overlayPlay.addEventListener('click', overlayPlayHandler);
       if(muteBtn) muteBtn.addEventListener('click', muteHandler);
       if(skipBtn) skipBtn.addEventListener('click', skipHandler);
-      // When user manually pauses the video (e.g., via browser controls), pause countdown
-      if(instrVideo){ instrVideo.addEventListener('pause', videoPauseHandler); instrVideo.addEventListener('play', videoPlayHandler); }
+      // Images don't have pause/play events, so no need to attach them
 
       // If buttons exist, give them basic focus handling for accessibility
       try{ if(instrStartBtn) instrStartBtn.setAttribute('aria-pressed','false'); }catch(e){}
@@ -401,8 +391,8 @@
     try{
       // Defensive: make sure instructions audio is stopped in case it wasn't paused earlier
       try{ const ia = document.getElementById('instructions-audio'); if(ia){ ia.pause(); ia.currentTime = 0; } }catch(e){}
-      // also ensure instruction preview video is paused/reset (defensive)
-      try{ const iv = document.getElementById('instr-video'); if(iv){ iv.pause(); iv.currentTime = 0; if(iv.getAttribute('src')){ iv.removeAttribute('src'); iv.load(); iv.style.display='none'; } } }catch(e){}
+      // also ensure instruction preview image is cleared (defensive)
+      try{ const iv = document.getElementById('instr-video'); if(iv){ if(iv.getAttribute('src')){ iv.removeAttribute('src'); iv.style.display='none'; } } }catch(e){}
 
       if(Array.isArray(previouslyPlaying) && previouslyPlaying.length){
         // Ensure we don't accidentally resume modal-only audio
