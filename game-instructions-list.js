@@ -257,7 +257,7 @@
 
       ]
     },
-    { id: 20, title: "Windows XP", video: "novid.webp", 
+    { id: 20, title: "Windows XP", video: "nohayvideo.webp", 
       instructions: "Windows XP es un sistema operativo lanzado por Microsoft en 2001. Fue muy popular por su interfaz amigable, estabilidad y compatibilidad con una amplia gama de software y hardware. Incluía características como el menú Inicio rediseñado, la barra de tareas mejorada y soporte para redes domésticas.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -309,7 +309,7 @@
 
       ]
     },
-    { id: 24, title: "8 ball pool (OLD)", video: "novid.webp", 
+    { id: 24, title: "8 ball pool (OLD)", video: "nohayvideo.webp", 
       instructions: "Esta version del juego esta descontinuada, se abrira la versión más reciente de 8 ball pool en su lugar. Procedo con las instrucciones de la versión más reciente. 8 Ball Pool es un juego de billar en línea donde compites contra otros jugadores en partidas de 8 bolas. El objetivo es meter todas tus bolas (rayadas o lisas) y luego la bola 8 para ganar la partida.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -351,7 +351,7 @@
 
       ]
     },
-    { id: 28, title: "Tetris pirata", video: "novid.webp", 
+    { id: 28, title: "Tetris pirata", video: "nohayvideo.webp", 
       instructions: "Tetris es un clásico juego de rompecabezas lanzado en 1984 por Alexey Pajitnov. El objetivo es acomodar piezas llamadas tetrominos que caen desde la parte superior de la pantalla, formando líneas horizontales completas para eliminarlas y evitar que el tablero se llene.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -390,7 +390,7 @@
 
       ]
     },
-    { id: 32, title: "Minecraft Precision Client", video: "novid.webp", 
+    { id: 32, title: "Minecraft Precision Client", video: "nohayvideo.webp", 
       instructions: "Este juego esta en mantenimiento, es jugable, sin embargo, bugs tanto en la plataforma, como en el juego pueden presentarse, procedo a instruccion: Minecraft es un juego de construcción y supervivencia donde los jugadores exploran un mundo generado proceduralmente lleno de bloques, minerales y criaturas.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -406,7 +406,7 @@
         { key: "ESCAPE", desc: "Abrir menú de pausa" },
       ]
     },
-    { id: 33, title: "Wii Simulation", video: "novid.webp", 
+    { id: 33, title: "Wii Simulation", video: "nohayvideo.webp", 
       instructions: "Esta es una recreacion del menú de la consola Nintendo Wii hecha en HTML, CSS Y JS, no es un juego como tal. Disfruta navegando por el menú y probando las aplicaciones incluidas.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -474,7 +474,7 @@
 
       ]
     },
-    { id: 39, title: "Angry Birds", video: "novid.webp", 
+    { id: 39, title: "Angry Birds", video: "nohayvideo.webp", 
       instructions: "No sé que poner aqui, es más ni siquiera sé si el juego funciona. Suerte jaja.",
       timerSecs: 120,
       controls: [
@@ -484,7 +484,7 @@
 
       ]
     },
-    { id: 40, title: "BitLife", video: "novid.webp", 
+    { id: 40, title: "BitLife", video: "nohayvideo.webp", 
       instructions: "BitLife es un simulador de vida en formato texto donde el objetivo es tomar decisiones que afectan el destino de tu personaje desde su nacimiento hasta su muerte. Puedes estudiar, trabajar, casarte, tener hijos, cometer crímenes o vivir de forma ejemplar, todo depende de las elecciones que hagas.",
       timerSecs: 120,
       controls: [
@@ -521,7 +521,7 @@
 
       ]
     },
-    { id: 44, title: "Tetris Chafa", video: "novid.webp", 
+    { id: 44, title: "Tetris Chafa", video: "nohayvideo.webp", 
       instructions: "Tetris es un clásico juego de rompecabezas lanzado en 1984 por Alexey Pajitnov. El objetivo es acomodar piezas llamadas tetrominos que caen desde la parte superior de la pantalla, formando líneas horizontales completas para eliminarlas y evitar que el tablero se llene.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -557,7 +557,7 @@
 
       ]
     },
-    { id: 47, title: "The World's Hardest Game", video: "novid.webp", 
+    { id: 47, title: "The World's Hardest Game", video: "nohayvideo.webp", 
       instructions: "The World’s Hardest Game es un clásico juego de navegador que se hizo famoso por su dificultad extrema. El objetivo es mover un cuadrado rojo a través de laberintos llenos de enemigos (círculos azules) y trampas, recogiendo monedas amarillas y llegando a la zona verde de meta sin ser tocado.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -609,7 +609,7 @@
 
       ]
     },
-    { id: 51, title: "2048", video: "novid.webp", 
+    { id: 51, title: "2048", video: "nohayvideo.webp", 
       instructions: "2048 es un juego de navegador donde debes combinar bloques con números iguales para alcanzar el número 2048 (aunque puedes seguir jugando). Usa las flechas del teclado para mover los bloques y combinarlos.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -620,7 +620,7 @@
 
       ]
     },
-    { id: 52, title: "DON'T YOU LECTURE ME WITH YOUR THIRTY DOLLAR WEBSITE", video: "novid.webp", 
+    { id: 52, title: "DON'T YOU LECTURE ME WITH YOUR THIRTY DOLLAR WEBSITE", video: "nohayvideo.webp", 
       instructions: "“Don’t You Lecture Me With Your $30 Website” es un generador de memes musicales creado por el desarrollador GDColon. Se basa en el famoso meme de Dragon Ball Z (“Don’t you lecture me with your $30 haircut”) y permite combinar cientos de sonidos icónicos para crear secuencias musicales absurdas y divertidas.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -654,7 +654,7 @@
 
       ]
     },
-    { id: 55, title: "Death Run 3D", video: "novid.webp", 
+    { id: 55, title: "Death Run 3D", video: "nohayvideo.webp", 
       instructions: "Death Run 3D es un juego arcade de navegador muy rápido y desafiante. El objetivo es controlar un cubo que avanza automáticamente por un túnel lleno de obstáculos, esquivándolos a toda velocidad. Es conocido por su dificultad y por exigir reflejos precisos.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -697,7 +697,7 @@
         { mouse: "left", desc: "Apuntar / UI" },
       ]
     },
-    { id: 59, title: "Google Gravity", video: "novid.webp", 
+    { id: 59, title: "Google Gravity", video: "nohayvideo.webp", 
       instructions: "Google Gravity es una divertida demo donde la interfaz de Google cae por efecto de la gravedad y puedes arrastrar elementos por la página. No es un juego tradicional, sino una simulación física para experimentar con objetos en pantalla.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -727,7 +727,7 @@
 
       ]
     },
-    { id: 62, title: "Roblox", video: "novid.webp", 
+    { id: 62, title: "Roblox", video: "nohayvideo.webp", 
       instructions: "Roblox es una plataforma de juegos creados por usuarios que incluye miles de experiencias distintas. Las mecánicas varían por juego, pero en general exploras mundos, completas misiones, construyes y compites con otros jugadores. Requiere cuenta para jugar online en la mayoría de modos.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -738,7 +738,7 @@
         { key: "ESPACIO", desc: "Saltar" },
       ]
     },
-    { id: 63, title: "Plantas Vs Zombies", video: "novid.webp", 
+    { id: 63, title: "Plantas Vs Zombies", video: "nohayvideo.webp", 
       instructions: "Plants vs. Zombies es un juego de defensa de torres en el que colocas plantas con diferentes habilidades para detener oleadas de zombis antes de que lleguen a tu casa. Gestiona el sol (recurso), elige las plantas adecuadas por fila y combina defensas para enfrentar distintos tipos de enemigos.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -747,7 +747,7 @@
         { key: "ESCAPE", desc: "Pausa/Salir" },
       ]
     },
-    { id: 64, title: "Fruit Ninja", video: "novid.webp", 
+    { id: 64, title: "Fruit Ninja", video: "nohayvideo.webp", 
       instructions: "Fruit Ninja es un juego de habilidad donde cortas frutas que aparecen en pantalla deslizando el dedo o el cursor. Evita las bombas, corta múltiples frutas con un solo trazo para combos y apunta a conseguir la puntuación más alta antes de que se acaben las vidas o el tiempo.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -789,7 +789,7 @@
         { keys: ["←","↑","↓","→"], desc: "Controlar las notas" },
       ]
     },
-    { id: 69, title: "Hacker Typer", video: "novid.webp", 
+    { id: 69, title: "Hacker Typer", video: "nohayvideo.webp", 
       instructions: "Hacker Typer es una broma interactiva donde al presionar teclas se simula código complejo apareciendo en pantalla, emulando la estética de un 'hacker' en películas. No tiene impacto en sistemas reales; es solo un efecto visual para divertirse.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -798,7 +798,7 @@
         { mouse: "left", desc: "Interacción/Reset" },
       ]
     },
-    { id: 70, title: "Stack", video: "novid.webp", 
+    { id: 70, title: "Stack", video: "nohayvideo.webp", 
       instructions: "Stack es un juego de habilidad en el que apilas bloques uno sobre otro intentando alinearlos perfectamente. Cada bloque mal alineado reduce el tamaño de los siguientes, aumentando la dificultad; intenta construir la torre más alta posible para conseguir puntuaciones altas.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -806,7 +806,7 @@
         { key: "CLICK IZQ", desc: "Colocar bloque" },
       ]
     },
-    { id: 71, title: "There is no game", video: "novid.webp", 
+    { id: 71, title: "There is no game", video: "nohayvideo.webp", 
       instructions: "There Is No Game es una aventura de puzzles y humor que juega con la idea de que no existe un juego: debes ignorar las instrucciones y manipular la interfaz para avanzar en una experiencia metaficcional llena de acertijos y sorpresas.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -815,7 +815,7 @@
         { keys: ["ESCAPE"], desc: "Salir / Reiniciar" },
       ]
     },
-    { id: 72, title: "Bad Piggies", video: "novid.webp", 
+    { id: 72, title: "Bad Piggies", video: "nohayvideo.webp", 
       instructions: "Bad Piggies es un juego de construcción y puzzle del universo Angry Birds donde controlas a los cerdos para construir vehículos y dispositivos que les permitan alcanzar objetivos. Usa piezas como ruedas, cajas y motores para diseñar soluciones y completar niveles.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -824,7 +824,7 @@
         { key: "ESPACIO", desc: "Activar motor / probar" },
       ]
     },
-    { id: 73, title: "Subway Surfers", video: "novid.webp", 
+    { id: 73, title: "Subway Surfers", video: "nohayvideo.webp", 
       instructions: "Subway Surfers es un endless runner donde controlas a un personaje que corre por vías de tren esquivando obstáculos, recogiendo monedas y power-ups. Cambia de carril, salta y deslízate para sobrevivir el mayor tiempo posible mientras aumentan la velocidad.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -889,7 +889,7 @@
         { key: "ESPACIO", desc: "Acciones contextuales" },
       ]
     },
-    { id: 80, title: "Run3", video: "novid.webp", 
+    { id: 80, title: "Run3", video: "nohayvideo.webp", 
       instructions: "Run 3 es un endless runner de plataformas en túneles espaciales con gravedad variable. Controlas a un corredor que salta y cambia de carril para evitar huecos; algunos personajes pueden correr por paredes y techos. Requiere reflejos y timing precisos.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -898,7 +898,7 @@
         { key: "ESPACIO", desc: "Saltar" },
       ]
     },
-    { id: 81, title: "Run2", video: "novid.webp", 
+    { id: 81, title: "Run2", video: "nohayvideo.webp", 
       instructions: "Run 2 es un juego de plataformas con gravedad y movimiento en túneles donde debes saltar y esquivar obstáculos. Incluye personajes con distintas habilidades; atraviesa niveles y puertas para progresar.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -907,7 +907,7 @@
         { key: "ESPACIO", desc: "Saltar" },
       ]
     },
-    { id: 82, title: "Run", video: "novid.webp", 
+    { id: 82, title: "Run", video: "nohayvideo.webp", 
       instructions: "Run (la primera entrega) es un corredor de plataformas en túneles con obstáculos y saltos precisos. Controla el personaje para pasar secciones complicadas y llegar al final de cada nivel.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -916,7 +916,7 @@
         { key: "ESPACIO", desc: "Saltar" },
       ]
     },
-    { id: 83, title: "Fluid Simulator", video: "novid.webp", 
+    { id: 83, title: "Fluid Simulator", video: "nohayvideo.webp", 
       instructions: "Fluid Simulator es una demo interactiva de física de fluidos donde puedes crear, mezclar y observar comportamientos líquidos en tiempo real. No es un juego con objetivos, sino una herramienta para experimentar con simulaciones.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -925,7 +925,7 @@
         { mouse: "right", desc: "Eliminar/limpiar" },
       ]
     },
-    { id: 84, title: "Sandtrix", video: "novid.webp", 
+    { id: 84, title: "Sandtrix", video: "nohayvideo.webp", 
       instructions: "Sandtrix es una mezcla entre sandbox y puzzle donde manipulas partículas tipo arena para resolver desafíos o crear estructuras. Utiliza herramientas para mover, crear y mezclar materiales y observa cómo interactúan según la física del juego.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -935,7 +935,7 @@
         { keys: ["1","2","3"], desc: "Cambiar herramienta/material" },
       ]
     },
-    { id: 85, title: "Rooftop Snipers", video: "novid.webp", 
+    { id: 85, title: "Rooftop Snipers", video: "nohayvideo.webp", 
       instructions: "Rooftop Snipers es un juego de combate 1v1 donde dos jugadores se enfrentan en azoteas con distintas armas. Utiliza la gravedad y el rebote de proyectiles para eliminar al rival; los movimientos rápidos y saltos bien calculados marcan la diferencia.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -945,7 +945,7 @@
         { key: "CLICK IZQ", desc: "Disparar" },
       ]
     },
-    { id: 86, title: "Dino", video: "novid.webp", 
+    { id: 86, title: "Dino", video: "nohayvideo.webp", 
       instructions: "Dino es el mini-juego oculto del navegador que aparece cuando no hay conexión a internet: controla al dinosaurio para saltar cactus y esquivar obstáculos. Es simple pero adictivo; la velocidad aumenta con la distancia.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -954,7 +954,7 @@
         { key: "ABAJO", desc: "Agacharse" },
       ]
     },
-    { id: 87, title: "Buscaminas", video: "novid.webp", 
+    { id: 87, title: "Buscaminas", video: "nohayvideo.webp", 
       instructions: "Buscaminas es un clásico juego de lógica donde debes encontrar todas las minas sin detonarlas. Usa la lógica para deducir la ubicación de las minas y descubrir celdas seguras.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -963,7 +963,7 @@
         { key: "CLICK DER", desc: "Marcar mina" },
       ]
     },
-    { id: 88, title: "Papa's Pizzeria", video: "novid.webp", 
+    { id: 88, title: "Papa's Pizzeria", video: "nohayvideo.webp", 
       instructions: "Papa’s Pizzeria es uno de los juegos más famosos de la saga Papa Louie creada por Flipline Studios. En este título te conviertes en el encargado de la pizzería de Papa Louie, preparando pizzas para clientes exigentes y gestionando todo el proceso: desde tomar pedidos hasta hornear y cortar.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -975,7 +975,7 @@
 
       ]
     },
-    { id: 89, title: "San valentin", video: "novid.webp", 
+    { id: 89, title: "San valentin", video: "nohayvideo.webp", 
       instructions: "Ha llegado la hora, si quieres declararte sin palabras, sin nervios, entra, escribe el nombre de esa persona, y pasale la computadora a esa persona especial, el mensaje estara, su respuesta se guardara. Mucha suerte y QUE VIVA EL AMOOOOOOOOOR.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -1333,7 +1333,7 @@
 
       ]
     },
-    { id: 20, title: "Windows XP", video: "novid.webp", 
+    { id: 20, title: "Windows XP", video: "nohayvideo.webp", 
       instructions: "Windows XP es un sistema operativo lanzado por Microsoft en 2001. Fue muy popular por su interfaz amigable, estabilidad y compatibilidad con una amplia gama de software y hardware. Incluía características como el menú Inicio rediseñado, la barra de tareas mejorada y soporte para redes domésticas.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -1385,7 +1385,7 @@
 
       ]
     },
-    { id: 24, title: "8 ball pool (OLD)", video: "novid.webp", 
+    { id: 24, title: "8 ball pool (OLD)", video: "nohayvideo.webp", 
       instructions: "Esta version del juego esta descontinuada, se abrira la versión más reciente de 8 ball pool en su lugar. Procedo con las instrucciones de la versión más reciente. 8 Ball Pool es un juego de billar en línea donde compites contra otros jugadores en partidas de 8 bolas. El objetivo es meter todas tus bolas (rayadas o lisas) y luego la bola 8 para ganar la partida.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -1427,7 +1427,7 @@
 
       ]
     },
-    { id: 28, title: "Tetris pirata", video: "novid.webp", 
+    { id: 28, title: "Tetris pirata", video: "nohayvideo.webp", 
       instructions: "Tetris es un clásico juego de rompecabezas lanzado en 1984 por Alexey Pajitnov. El objetivo es acomodar piezas llamadas tetrominos que caen desde la parte superior de la pantalla, formando líneas horizontales completas para eliminarlas y evitar que el tablero se llene.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -1466,7 +1466,7 @@
 
       ]
     },
-    { id: 32, title: "Minecraft Precision Client", video: "novid.webp", 
+    { id: 32, title: "Minecraft Precision Client", video: "nohayvideo.webp", 
       instructions: "Este juego esta en mantenimiento, es jugable, sin embargo, bugs tanto en la plataforma, como en el juego pueden presentarse, procedo a instruccion: Minecraft es un juego de construcción y supervivencia donde los jugadores exploran un mundo generado proceduralmente lleno de bloques, minerales y criaturas.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -1482,7 +1482,7 @@
         { key: "ESCAPE", desc: "Abrir menú de pausa" },
       ]
     },
-    { id: 33, title: "Wii Simulation", video: "novid.webp", 
+    { id: 33, title: "Wii Simulation", video: "nohayvideo.webp", 
       instructions: "Esta es una recreacion del menú de la consola Nintendo Wii hecha en HTML, CSS Y JS, no es un juego como tal. Disfruta navegando por el menú y probando las aplicaciones incluidas.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -1550,7 +1550,7 @@
 
       ]
     },
-    { id: 39, title: "Angry Birds", video: "novid.webp", 
+    { id: 39, title: "Angry Birds", video: "nohayvideo.webp", 
       instructions: "No sé que poner aqui, es más ni siquiera sé si el juego funciona. Suerte jaja.",
       timerSecs: 120,
       controls: [
@@ -1560,7 +1560,7 @@
 
       ]
     },
-    { id: 40, title: "BitLife", video: "novid.webp", 
+    { id: 40, title: "BitLife", video: "nohayvideo.webp", 
       instructions: "BitLife es un simulador de vida en formato texto donde el objetivo es tomar decisiones que afectan el destino de tu personaje desde su nacimiento hasta su muerte. Puedes estudiar, trabajar, casarte, tener hijos, cometer crímenes o vivir de forma ejemplar, todo depende de las elecciones que hagas.",
       timerSecs: 120,
       controls: [
@@ -1597,7 +1597,7 @@
 
       ]
     },
-    { id: 44, title: "Tetris Chafa", video: "novid.webp", 
+    { id: 44, title: "Tetris Chafa", video: "nohayvideo.webp", 
       instructions: "Tetris es un clásico juego de rompecabezas lanzado en 1984 por Alexey Pajitnov. El objetivo es acomodar piezas llamadas tetrominos que caen desde la parte superior de la pantalla, formando líneas horizontales completas para eliminarlas y evitar que el tablero se llene.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -1633,7 +1633,7 @@
 
       ]
     },
-    { id: 47, title: "The World's Hardest Game", video: "novid.webp", 
+    { id: 47, title: "The World's Hardest Game", video: "nohayvideo.webp", 
       instructions: "The World’s Hardest Game es un clásico juego de navegador que se hizo famoso por su dificultad extrema. El objetivo es mover un cuadrado rojo a través de laberintos llenos de enemigos (círculos azules) y trampas, recogiendo monedas amarillas y llegando a la zona verde de meta sin ser tocado.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -1685,7 +1685,7 @@
 
       ]
     },
-    { id: 51, title: "2048", video: "novid.webp", 
+    { id: 51, title: "2048", video: "nohayvideo.webp", 
       instructions: "2048 es un juego de navegador donde debes combinar bloques con números iguales para alcanzar el número 2048 (aunque puedes seguir jugando). Usa las flechas del teclado para mover los bloques y combinarlos.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -1696,7 +1696,7 @@
 
       ]
     },
-    { id: 52, title: "DON'T YOU LECTURE ME WITH YOUR THIRTY DOLLAR WEBSITE", video: "novid.webp", 
+    { id: 52, title: "DON'T YOU LECTURE ME WITH YOUR THIRTY DOLLAR WEBSITE", video: "nohayvideo.webp", 
       instructions: "“Don’t You Lecture Me With Your $30 Website” es un generador de memes musicales creado por el desarrollador GDColon. Se basa en el famoso meme de Dragon Ball Z (“Don’t you lecture me with your $30 haircut”) y permite combinar cientos de sonidos icónicos para crear secuencias musicales absurdas y divertidas.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -1730,7 +1730,7 @@
 
       ]
     },
-    { id: 55, title: "Death Run 3D", video: "novid.webp", 
+    { id: 55, title: "Death Run 3D", video: "nohayvideo.webp", 
       instructions: "Death Run 3D es un juego arcade de navegador muy rápido y desafiante. El objetivo es controlar un cubo que avanza automáticamente por un túnel lleno de obstáculos, esquivándolos a toda velocidad. Es conocido por su dificultad y por exigir reflejos precisos.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -1773,7 +1773,7 @@
         { mouse: "left", desc: "Apuntar / UI" },
       ]
     },
-    { id: 59, title: "Google Gravity", video: "novid.webp", 
+    { id: 59, title: "Google Gravity", video: "nohayvideo.webp", 
       instructions: "Google Gravity es una divertida demo donde la interfaz de Google cae por efecto de la gravedad y puedes arrastrar elementos por la página. No es un juego tradicional, sino una simulación física para experimentar con objetos en pantalla.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -1803,7 +1803,7 @@
 
       ]
     },
-    { id: 62, title: "Roblox", video: "novid.webp", 
+    { id: 62, title: "Roblox", video: "nohayvideo.webp", 
       instructions: "Roblox es una plataforma de juegos creados por usuarios que incluye miles de experiencias distintas. Las mecánicas varían por juego, pero en general exploras mundos, completas misiones, construyes y compites con otros jugadores. Requiere cuenta para jugar online en la mayoría de modos.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -1814,7 +1814,7 @@
         { key: "ESPACIO", desc: "Saltar" },
       ]
     },
-    { id: 63, title: "Plantas Vs Zombies", video: "novid.webp", 
+    { id: 63, title: "Plantas Vs Zombies", video: "nohayvideo.webp", 
       instructions: "Plants vs. Zombies es un juego de defensa de torres en el que colocas plantas con diferentes habilidades para detener oleadas de zombis antes de que lleguen a tu casa. Gestiona el sol (recurso), elige las plantas adecuadas por fila y combina defensas para enfrentar distintos tipos de enemigos.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -1823,7 +1823,7 @@
         { key: "ESCAPE", desc: "Pausa/Salir" },
       ]
     },
-    { id: 64, title: "Fruit Ninja", video: "novid.webp", 
+    { id: 64, title: "Fruit Ninja", video: "nohayvideo.webp", 
       instructions: "Fruit Ninja es un juego de habilidad donde cortas frutas que aparecen en pantalla deslizando el dedo o el cursor. Evita las bombas, corta múltiples frutas con un solo trazo para combos y apunta a conseguir la puntuación más alta antes de que se acaben las vidas o el tiempo.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -1865,7 +1865,7 @@
         { keys: ["←","↑","↓","→"], desc: "Controlar las notas" },
       ]
     },
-    { id: 69, title: "Hacker Typer", video: "novid.webp", 
+    { id: 69, title: "Hacker Typer", video: "nohayvideo.webp", 
       instructions: "Hacker Typer es una broma interactiva donde al presionar teclas se simula código complejo apareciendo en pantalla, emulando la estética de un 'hacker' en películas. No tiene impacto en sistemas reales; es solo un efecto visual para divertirse.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -1874,7 +1874,7 @@
         { mouse: "left", desc: "Interacción/Reset" },
       ]
     },
-    { id: 70, title: "Stack", video: "novid.webp", 
+    { id: 70, title: "Stack", video: "nohayvideo.webp", 
       instructions: "Stack es un juego de habilidad en el que apilas bloques uno sobre otro intentando alinearlos perfectamente. Cada bloque mal alineado reduce el tamaño de los siguientes, aumentando la dificultad; intenta construir la torre más alta posible para conseguir puntuaciones altas.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -1882,7 +1882,7 @@
         { key: "CLICK IZQ", desc: "Colocar bloque" },
       ]
     },
-    { id: 71, title: "There is no game", video: "novid.webp", 
+    { id: 71, title: "There is no game", video: "nohayvideo.webp", 
       instructions: "There Is No Game es una aventura de puzzles y humor que juega con la idea de que no existe un juego: debes ignorar las instrucciones y manipular la interfaz para avanzar en una experiencia metaficcional llena de acertijos y sorpresas.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -1891,7 +1891,7 @@
         { keys: ["ESCAPE"], desc: "Salir / Reiniciar" },
       ]
     },
-    { id: 72, title: "Bad Piggies", video: "novid.webp", 
+    { id: 72, title: "Bad Piggies", video: "nohayvideo.webp", 
       instructions: "Bad Piggies es un juego de construcción y puzzle del universo Angry Birds donde controlas a los cerdos para construir vehículos y dispositivos que les permitan alcanzar objetivos. Usa piezas como ruedas, cajas y motores para diseñar soluciones y completar niveles.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -1900,7 +1900,7 @@
         { key: "ESPACIO", desc: "Activar motor / probar" },
       ]
     },
-    { id: 73, title: "Subway Surfers", video: "novid.webp", 
+    { id: 73, title: "Subway Surfers", video: "nohayvideo.webp", 
       instructions: "Subway Surfers es un endless runner donde controlas a un personaje que corre por vías de tren esquivando obstáculos, recogiendo monedas y power-ups. Cambia de carril, salta y deslízate para sobrevivir el mayor tiempo posible mientras aumentan la velocidad.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -1965,7 +1965,7 @@
         { key: "ESPACIO", desc: "Acciones contextuales" },
       ]
     },
-    { id: 80, title: "Run3", video: "novid.webp", 
+    { id: 80, title: "Run3", video: "nohayvideo.webp", 
       instructions: "Run 3 es un endless runner de plataformas en túneles espaciales con gravedad variable. Controlas a un corredor que salta y cambia de carril para evitar huecos; algunos personajes pueden correr por paredes y techos. Requiere reflejos y timing precisos.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -1974,7 +1974,7 @@
         { key: "ESPACIO", desc: "Saltar" },
       ]
     },
-    { id: 81, title: "Run2", video: "novid.webp", 
+    { id: 81, title: "Run2", video: "nohayvideo.webp", 
       instructions: "Run 2 es un juego de plataformas con gravedad y movimiento en túneles donde debes saltar y esquivar obstáculos. Incluye personajes con distintas habilidades; atraviesa niveles y puertas para progresar.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -1983,7 +1983,7 @@
         { key: "ESPACIO", desc: "Saltar" },
       ]
     },
-    { id: 82, title: "Run", video: "novid.webp", 
+    { id: 82, title: "Run", video: "nohayvideo.webp", 
       instructions: "Run (la primera entrega) es un corredor de plataformas en túneles con obstáculos y saltos precisos. Controla el personaje para pasar secciones complicadas y llegar al final de cada nivel.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -1992,7 +1992,7 @@
         { key: "ESPACIO", desc: "Saltar" },
       ]
     },
-    { id: 83, title: "Fluid Simulator", video: "novid.webp", 
+    { id: 83, title: "Fluid Simulator", video: "nohayvideo.webp", 
       instructions: "Fluid Simulator es una demo interactiva de física de fluidos donde puedes crear, mezclar y observar comportamientos líquidos en tiempo real. No es un juego con objetivos, sino una herramienta para experimentar con simulaciones.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -2001,7 +2001,7 @@
         { mouse: "right", desc: "Eliminar/limpiar" },
       ]
     },
-    { id: 84, title: "Sandtrix", video: "novid.webp", 
+    { id: 84, title: "Sandtrix", video: "nohayvideo.webp", 
       instructions: "Sandtrix es una mezcla entre sandbox y puzzle donde manipulas partículas tipo arena para resolver desafíos o crear estructuras. Utiliza herramientas para mover, crear y mezclar materiales y observa cómo interactúan según la física del juego.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -2011,7 +2011,7 @@
         { keys: ["1","2","3"], desc: "Cambiar herramienta/material" },
       ]
     },
-    { id: 85, title: "Rooftop Snipers", video: "novid.webp", 
+    { id: 85, title: "Rooftop Snipers", video: "nohayvideo.webp", 
       instructions: "Rooftop Snipers es un juego de combate 1v1 donde dos jugadores se enfrentan en azoteas con distintas armas. Utiliza la gravedad y el rebote de proyectiles para eliminar al rival; los movimientos rápidos y saltos bien calculados marcan la diferencia.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -2021,7 +2021,7 @@
         { key: "CLICK IZQ", desc: "Disparar" },
       ]
     },
-    { id: 86, title: "Dino", video: "novid.webp", 
+    { id: 86, title: "Dino", video: "nohayvideo.webp", 
       instructions: "Dino es el mini-juego oculto del navegador que aparece cuando no hay conexión a internet: controla al dinosaurio para saltar cactus y esquivar obstáculos. Es simple pero adictivo; la velocidad aumenta con la distancia.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -2030,7 +2030,7 @@
         { key: "ABAJO", desc: "Agacharse" },
       ]
     },
-    { id: 87, title: "Buscaminas", video: "novid.webp", 
+    { id: 87, title: "Buscaminas", video: "nohayvideo.webp", 
       instructions: "Buscaminas es un clásico juego de lógica donde debes encontrar todas las minas sin detonarlas. Usa la lógica para deducir la ubicación de las minas y descubrir celdas seguras.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -2039,7 +2039,7 @@
         { key: "CLICK DER", desc: "Marcar mina" },
       ]
     },
-    { id: 88, title: "Papa's Pizzeria", video: "novid.webp", 
+    { id: 88, title: "Papa's Pizzeria", video: "nohayvideo.webp", 
       instructions: "Papa’s Pizzeria es uno de los juegos más famosos de la saga Papa Louie creada por Flipline Studios. En este título te conviertes en el encargado de la pizzería de Papa Louie, preparando pizzas para clientes exigentes y gestionando todo el proceso: desde tomar pedidos hasta hornear y cortar.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
@@ -2051,7 +2051,7 @@
 
       ]
     },
-    { id: 89, title: "San valentin", video: "novid.webp", 
+    { id: 89, title: "San valentin", video: "nohayvideo.webp", 
       instructions: "Ha llegado la hora, si quieres declararte sin palabras, sin nervios, entra, escribe el nombre de esa persona, y pasale la computadora a esa persona especial, el mensaje estara, su respuesta se guardara. Mucha suerte y QUE VIVA EL AMOOOOOOOOOR.", 
       instructions2: "Mucha Suerte!",
       timerSecs: 120,
